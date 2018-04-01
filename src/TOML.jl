@@ -220,6 +220,7 @@ isfloat(token::Token) = token.kind == :float
 isboolean(token::Token) = token.kind == :boolean
 isdatetime(token::Token) = token.kind == :datetime
 isatomicvalue(token::Token) = isstring(token) || isinteger(token) || isfloat(token) || isboolean(token) || isdatetime(token)
+iscontainer(token::Token) = token.kind ∈ (:single_bracket_left, :curly_brace_left)
 iskey(token::Token) = token.kind == :bare_key || token.kind == :quoted_key
 iseof(token::Token) = token.kind == :eof
 
@@ -479,6 +480,11 @@ function parsetoken(reader::StreamReader)
                 accept(readtoken(reader))
             end
             return token
+        elseif token.kind == :curly_brace_left
+            readtoken(reader)
+            accept(token)
+            push!(stack, :inline_table)
+            return TOKEN_INLINE_TABLE_BEGIN
         elseif isatomicvalue(token)
             readtoken(reader)
             while peektoken(reader).kind ∈ (:comment, :whitespace, :newline)
@@ -507,10 +513,12 @@ function parsetoken(reader::StreamReader)
             end
             if peektoken(reader).kind == :comma
                 accept(readtoken(reader))
+            elseif isatomicvalue(peektoken(reader)) || iscontainer(peektoken(reader))
+                # ok
             elseif peektoken(reader).kind ∈ (:curly_brace_right, :bare_key, :quoted_key, :whitespace)
                 # ok
             else
-                unexpectedtoken(token, reader.linenum)
+                unexpectedtoken(peektoken(reader), reader.linenum)
             end
             return token
         else

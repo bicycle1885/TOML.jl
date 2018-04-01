@@ -185,6 +185,23 @@ x = [ [ 1, 2 ], [3, 4, 5] ]
     Token(:newline, "\n"),
 ]
 
+tokens = alltokens("x=[{foo=10}]")
+@test tokens == [
+ TOML.Token(:bare_key, "x"),
+ TOML.Token(:equal, "="),
+ TOML.Token(:inline_array_begin, ""),
+ TOML.Token(:single_bracket_left, "["),
+ TOML.Token(:inline_table_begin, ""),
+ TOML.Token(:curly_brace_left, "{"),
+ TOML.Token(:bare_key, "foo"),
+ TOML.Token(:equal, "="),
+ TOML.Token(:integer, "10"),
+ TOML.Token(:curly_brace_right, "}"),
+ TOML.Token(:inline_table_end, ""),
+ TOML.Token(:single_bracket_right, "]"),
+ TOML.Token(:inline_array_end, ""),
+]
+
 tokens = alltokens("""
 foo = { hoge = 100 }
 """)
@@ -252,6 +269,46 @@ name = { first = "Tom", last = "Preston-Werner" }
      TOML.Token(:newline, "\n"),
 ]
 
+tokens = alltokens("x={foo=[1,2]}")
+@test tokens == [
+ TOML.Token(:bare_key, "x"),
+ TOML.Token(:equal, "="),
+ TOML.Token(:inline_table_begin, ""),
+ TOML.Token(:curly_brace_left, "{"),
+ TOML.Token(:bare_key, "foo"),
+ TOML.Token(:equal, "="),
+ TOML.Token(:inline_array_begin, ""),
+ TOML.Token(:single_bracket_left, "["),
+ TOML.Token(:integer, "1"),
+ TOML.Token(:comma, ","),
+ TOML.Token(:integer, "2"),
+ TOML.Token(:single_bracket_right, "]"),
+ TOML.Token(:inline_array_end, ""),
+ TOML.Token(:curly_brace_right, "}"),
+ TOML.Token(:inline_table_end, ""),
+]
+
+tokens = alltokens("x={foo=[[10]]}")
+@test tokens == [
+ TOML.Token(:bare_key, "x"),
+ TOML.Token(:equal, "="),
+ TOML.Token(:inline_table_begin, ""),
+ TOML.Token(:curly_brace_left, "{"),
+ TOML.Token(:bare_key, "foo"),
+ TOML.Token(:equal, "="),
+ TOML.Token(:inline_array_begin, ""),
+ TOML.Token(:single_bracket_left, "["),
+ TOML.Token(:inline_array_begin, ""),
+ TOML.Token(:single_bracket_left, "["),
+ TOML.Token(:integer, "10"),
+ TOML.Token(:single_bracket_right, "]"),
+ TOML.Token(:inline_array_end, ""),
+ TOML.Token(:single_bracket_right, "]"),
+ TOML.Token(:inline_array_end, ""),
+ TOML.Token(:curly_brace_right, "}"),
+ TOML.Token(:inline_table_end, ""),
+]
+
 tokens = alltokens("""[foo]\n""")
 @test tokens == [
     Token(:table_begin, ""),
@@ -311,6 +368,7 @@ tokens = alltokens("""
 ]
 
 @test_throws TOML.ParseError("unexpected '!' at line 1") alltokens("!")
+@test_throws TOML.ParseError("unexpected '!' at line 3") alltokens("\n\n!")
 @test_throws TOML.ParseError("unexpected end of file at line 1") alltokens("x")
 @test_throws TOML.ParseError("unexpected end of file at line 1") alltokens("x=")
 @test_throws TOML.ParseError("unexpected ',' at line 1") alltokens("x,")
@@ -330,6 +388,7 @@ tokens = alltokens("""
 @test_throws TOML.ParseError("unexpected '}' at line 1") alltokens("x={foo}")
 @test_throws TOML.ParseError("unexpected ',' at line 1") alltokens("x={,foo=100}")
 @test_throws TOML.ParseError("unexpected '.' at line 1") alltokens("x={10.0=10}")
+@test_throws TOML.ParseError("unexpected newline at line 1") alltokens("x={\nfoo=100}")
 @test_throws TOML.ParseError("line feed (LF) is expected after carriage return (CR) at line 1") alltokens("foo=100\r")
 
 data = TOML.parse("")
