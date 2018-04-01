@@ -333,7 +333,7 @@ function readtoken(reader::StreamReader)
             while true
                 kind, p, cs = scanvalue(buffer.data, p, buffer.p_end, buffer.p_eof, cs)
                 if cs < 0
-                    throw_parse_error("unexpected value format at line $(reader.linenum)")
+                    parse_error("invalid value format", reader.linenum)
                 elseif kind == :incomplete
                     fillbuffer!(input, buffer)
                     p = buffer.p
@@ -388,13 +388,13 @@ function readtoken(reader::StreamReader)
                 reader.expectvalue = false
                 return Token(:comma, ",")
             else
-                throw_parse_error("unexpected ',' at line $(reader.linenum)")
+                parse_error("unexpected character ','", reader.linenum)
             end
         elseif char == '}'  # inline table
             consume!(buffer, 1)
             return Token(:curly_brace_right, "}")
         else
-            throw(ParseError("unexpected character '$(char)' at line $(reader.linenum)"))
+            parse_error("unexpected character '$(char)'", reader.linenum)
         end
     end
     if !isempty(reader.stack)

@@ -311,6 +311,9 @@ tokens = alltokens("""
 ]
 
 @test_throws TOML.ParseError("line feed (LF) is expected after carriage return (CR) at line 1") alltokens("foo=100\r")
+@test_throws TOML.ParseError("invalid value format at line 1") alltokens("x = p")
+@test_throws TOML.ParseError("unexpected character '!' at line 1") alltokens("!")
+@test_throws TOML.ParseError("unexpected character ',' at line 1") alltokens("x,")
 
 data = TOML.parse("")
 @test data isa Dict
