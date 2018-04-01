@@ -223,8 +223,8 @@ isatomicvalue(token::Token) = isstring(token) || isinteger(token) || isfloat(tok
 iskey(token::Token) = token.kind == :bare_key || token.kind == :quoted_key
 iseof(token::Token) = token.kind == :eof
 
-# Human-readable token name.
-function tokenname(token::Token)
+# Human-readable description of token.
+function tokendesc(token::Token)
     if isstring(token)
         return "string"
     elseif token.kind == :integer
@@ -236,11 +236,13 @@ function tokenname(token::Token)
     elseif token.kind == :datetime
         return "datetime"
     elseif token.kind == :bare_key
-        return "bare key"
+        return "bare key '$(token.text)'"
     elseif token.kind == :quoted_key
         return "quoted key"
     elseif token.kind == :eof
         return "end of file"
+    elseif token.kind == :comma
+        return "','"
     elseif token.kind == :equal
         return "'='"
     elseif token.kind == :single_bracket_left
@@ -251,8 +253,11 @@ function tokenname(token::Token)
         return "'[['"
     elseif token.kind == :double_brackets_right
         return "']]'"
+    elseif token.kind == :curly_brace_left
+        return "'{'"
+    elseif token.kind == :curly_brace_right
+        return "'}'"
     else
-        # fallback
         return string(token.kind)
     end
 end
@@ -320,6 +325,7 @@ struct ParseError <: Exception
 end
 
 parse_error(msg, linenum) = throw(ParseError("$(msg) at line $(linenum)"))
+unexpectedtoken(token, linenum) = parse_error("unexpected $(tokendesc(token))", linenum)
 
 function readtoken(reader::StreamReader)
     if !isempty(reader.queue)
@@ -421,13 +427,13 @@ function readtoken(reader::StreamReader)
                 reader.expectvalue = false
                 return Token(:comma, ",")
             else
-                parse_error("unexpected character ','", reader.linenum)
+                parse_error("unexpected ','", reader.linenum)
             end
         elseif char == '}'  # inline table
             consume!(buffer, 1)
             return Token(:curly_brace_right, "}")
         else
-            parse_error("unexpected character '$(char)'", reader.linenum)
+            parse_error("unexpected '$(char)'", reader.linenum)
         end
     end
     return TOKEN_EOF
@@ -481,7 +487,7 @@ function parsetoken(reader::StreamReader)
             end
             return token
         else
-            parse_error("unexpected token", reader.linenum)
+            unexpectedtoken(token, reader.linenum)
         end
     elseif top == :inline_table
         if token.kind == :whitespace
@@ -506,7 +512,7 @@ function parsetoken(reader::StreamReader)
             end
             return token
         else
-            parse_error("unexpected token", reader.linenum)
+            unexpectedtoken(token, reader.linenum)
         end
     elseif token.kind ∈ (:eof, :comment, :whitespace, :newline)
         readtoken(reader)
@@ -516,7 +522,7 @@ function parsetoken(reader::StreamReader)
         if isatomicvalue(value) && peektoken(reader).kind == :whitespace
             accept(readtoken(reader))
             if peektoken(reader).kind ∉ (:newline, :comment)
-                parse_error("unexpected $(tokenname(token))", reader.linenum)
+                unexpectedtoken(peektoken(reader), reader.linenum)
             end
         end
         return token
@@ -532,13 +538,13 @@ function parsetoken(reader::StreamReader)
                 accept(token)
                 peektoken(reader).kind == :whitespace && accept(readtoken(reader))
             else
-                parse_error("unexpected token $(tokenname(token))", reader.linenum)
+                unexpectedtoken(token, reader.linenum)
             end
             while (token = readtoken(reader)).kind != close
                 if token.kind == :dot
                     accept(token)
                 else
-                    parse_error("unexpected token $(tokenname(token))", reader.linenum)
+                    unexpectedtoken(token, reader.linenum)
                 end
                 token = readtoken(reader)
                 token.kind == :whitespace && (accept(token); token = readtoken(reader))
@@ -546,11 +552,11 @@ function parsetoken(reader::StreamReader)
                     accept(token)
                     peektoken(reader).kind == :whitespace && accept(readtoken(reader))
                 else
-                    parse_error("unexpected token $(tokenname(token))", reader.linenum)
+                    unexpectedtoken(token, reader.linenum)
                 end
             end
             if token.kind != close
-                parse_error("unexpected token", reader.linenum)
+                unexpectedtoken(token, reader.linenum)
             end
             accept(token)
         end
@@ -579,7 +585,7 @@ function parsekeyvalue(reader::StreamReader)
     if token.kind == :equal
         accept(token)
     else
-        parse_error("'=' is expected", reader.linenum)
+        unexpectedtoken(token, reader.linenum)
     end
     token = readtoken(reader)
     if token.kind == :whitespace
@@ -600,7 +606,7 @@ function parsekeyvalue(reader::StreamReader)
         push!(reader.stack, :inline_table)
         return token
     else
-        parse_error("found no value after '='", reader.linenum)
+        unexpectedtoken(token, reader.linenum)
     end
 end
 
