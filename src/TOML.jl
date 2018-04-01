@@ -376,6 +376,8 @@ function readtoken(reader::StreamReader)
                 kind, p, cs = scanvalue(buffer.data, p, buffer.p_end, buffer.p_eof, cs)
                 if cs < 0
                     parse_error("invalid value format", reader.linenum)
+                elseif cs > 0 && 0 ≤ buffer.p_eof < p
+                    parse_error("unexpected end of file", reader.linenum)
                 elseif kind == :incomplete
                     fillbuffer!(input, buffer)
                     p = buffer.p

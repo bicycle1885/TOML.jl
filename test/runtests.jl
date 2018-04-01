@@ -374,6 +374,7 @@ tokens = alltokens("""
 @test_throws TOML.ParseError("unexpected ',' at line 1") alltokens("x,")
 @test_throws TOML.ParseError("invalid value format at line 1") alltokens("x = p")
 @test_throws TOML.ParseError("invalid value format at line 1") alltokens("x = [,1]")
+@test_throws TOML.ParseError("unexpected end of file at line 1") alltokens("x='foo")
 @test_throws TOML.ParseError("unexpected newline at line 1") alltokens("x=\n10")
 @test_throws TOML.ParseError("unexpected bare key 'bar' at line 1") alltokens("foo=100 bar=200")
 @test_throws TOML.ParseError("unexpected ']' at line 1") alltokens("[]")
