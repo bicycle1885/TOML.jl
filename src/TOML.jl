@@ -285,7 +285,6 @@ struct ParseError <: Exception
     msg::String
 end
 
-throw_parse_error(msg) = throw(ParseError(msg))
 parse_error(msg, linenum) = throw(ParseError("$(msg) at line $(linenum)"))
 
 function readtoken(reader::StreamReader)
@@ -473,7 +472,7 @@ function parsetoken(reader::StreamReader)
             end
             return token
         else
-            throw_parse_error("unexpected token at line $(reader.linenum)")
+            parse_error("unexpected token", reader.linenum)
         end
     elseif token.kind ∈ (:eof, :comment, :whitespace, :newline)
         readtoken(reader)
@@ -493,13 +492,13 @@ function parsetoken(reader::StreamReader)
                 accept(token)
                 peektoken(reader).kind == :whitespace && accept(readtoken(reader))
             else
-                throw_parse_error("unexpected token at line $(reader.linenum)")
+                parse_error("unexpected token", reader.linenum)
             end
             while (token = readtoken(reader)).kind != close
                 if token.kind == :dot
                     accept(token)
                 else
-                    throw_parse_error("unexpected token at line $(reader.linenum)")
+                    parse_error("unexpected token", reader.linenum)
                 end
                 token = readtoken(reader)
                 token.kind == :whitespace && (accept(token); token = readtoken(reader))
@@ -509,7 +508,7 @@ function parsetoken(reader::StreamReader)
                 end
             end
             if token.kind != close
-                throw_parse_error("unexpected token at line $(reader.linenum)")
+                parse_error("unexpected token", reader.linenum)
             end
             accept(token)
         end
@@ -521,7 +520,7 @@ function parsetoken(reader::StreamReader)
             return TOKEN_ARRAY_BEGIN
         end
     else
-        throw_parse_error("unexpected token at line $(reader.linenum)")
+        parse_error("unexpected token", reader.linenum)
     end
 end
 
