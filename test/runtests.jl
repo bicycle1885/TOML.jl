@@ -310,6 +310,8 @@ tokens = alltokens("""
     Token(:newline, "\n"),
 ]
 
+@test_throws TOML.ParseError("line feed (LF) is expected after carriage return (CR) at line 1") alltokens("foo=100\r")
+
 data = TOML.parse("")
 @test data isa Dict
 @test isempty(data)

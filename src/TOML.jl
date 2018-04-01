@@ -281,11 +281,12 @@ end
 iswhitespace(char::Char) = char == ' ' || char == '\t'
 iskeychar(char::Char) = 'A' ≤ char ≤ 'Z' || 'a' ≤ char ≤ 'z' || '0' ≤ char ≤ '9' || char == '-' || char == '_'
 
-struct ParserError <: Exception
+struct ParseError <: Exception
     msg::String
 end
 
-throw_parse_error(msg) = throw(ParserError(msg))
+throw_parse_error(msg) = throw(ParseError(msg))
+parse_error(msg, linenum) = throw(ParseError("$(msg) at line $(linenum)"))
 
 function readtoken(reader::StreamReader)
     if !isempty(reader.queue)
@@ -308,7 +309,7 @@ function readtoken(reader::StreamReader)
                     reader.linenum += 1
                     return Token(:newline, "\r\n")
                 else
-                    throw_parse_error("line feed character is expected at line $(reader.linenum)")
+                    parse_error("line feed (LF) is expected after carriage return (CR)", reader.linenum)
                 end
             else
                 reader.linenum += 1
@@ -393,7 +394,7 @@ function readtoken(reader::StreamReader)
             consume!(buffer, 1)
             return Token(:curly_brace_right, "}")
         else
-            throw(ParserError("unexpected character '$(char)' at line $(reader.linenum)"))
+            throw(ParseError("unexpected character '$(char)' at line $(reader.linenum)"))
         end
     end
     if !isempty(reader.stack)
