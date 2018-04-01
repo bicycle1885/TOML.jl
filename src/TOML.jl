@@ -397,9 +397,6 @@ function readtoken(reader::StreamReader)
             parse_error("unexpected character '$(char)'", reader.linenum)
         end
     end
-    if !isempty(reader.stack)
-        throw_parse_error("unexpected end of file")
-    end
     return TOKEN_EOF
 end
 
@@ -541,7 +538,7 @@ function parsekeyvalue(reader::StreamReader)
     if token.kind == :equal
         accept(token)
     else
-        throw_parse_error("unexpected token")
+        parse_error("'=' is expected", reader.linenum)
     end
     token = readtoken(reader)
     if token.kind == :whitespace
@@ -559,7 +556,7 @@ function parsekeyvalue(reader::StreamReader)
         accept(token)
         push!(reader.stack, :inline_table)
     else
-        throw_parse_error("unexpected token")
+        parse_error("found no value after '='", reader.linenum)
     end
     return nothing
 end
