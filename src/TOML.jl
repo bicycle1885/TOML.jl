@@ -223,6 +223,30 @@ isatomicvalue(token::Token) = isstring(token) || isinteger(token) || isfloat(tok
 iskey(token::Token) = token.kind == :bare_key || token.kind == :quoted_key
 iseof(token::Token) = token.kind == :eof
 
+# Human-readable token name.
+function tokenname(token::Token)
+    if isstring(token)
+        return "string"
+    elseif token.kind == :integer
+        return "integer"
+    elseif token.kind == :float
+        return "floating-point number"
+    elseif token.kind == :boolean
+        return "boolean"
+    elseif token.kind == :datetime
+        return "datetime"
+    elseif token.kind == :bare_key
+        return "bare key"
+    elseif token.kind == :quoted_key
+        return "quoted key"
+    elseif token.kind == :eof
+        return "end of file"
+    else
+        # fallback
+        return string(token.kind)
+    end
+end
+
 function keyname(token::Token)
     if token.kind == :bare_key
         return token.text
@@ -478,7 +502,13 @@ function parsetoken(reader::StreamReader)
         readtoken(reader)
         return token
     elseif token.kind ∈ (:bare_key, :quoted_key)
-        parsekeyvalue(reader)
+        value = parsekeyvalue(reader)
+        if isatomicvalue(value) && peektoken(reader).kind == :whitespace
+            accept(readtoken(reader))
+            if peektoken(reader).kind ∉ (:newline, :comment)
+                parse_error("unexpected $(tokenname(token))", reader.linenum)
+            end
+        end
         return token
     elseif token.kind ∈ (:single_bracket_left, :double_brackets_left)
         # '['  whitespace? ((bare_key|quoted_key) whitespace?) ('.' whitespace? (bare_key|quoted_key) whitespace?)*  ']'
@@ -546,18 +576,34 @@ function parsekeyvalue(reader::StreamReader)
     end
     if isatomicvalue(token)
         accept(token)
+        return token
     elseif token.kind == :single_bracket_left  # inline array
         accept(TOKEN_INLINE_ARRAY_BEGIN)
         accept(token)
         push!(reader.stack, :inline_array)
+        return token
     elseif token.kind == :curly_brace_left  # inline table
         accept(TOKEN_INLINE_TABLE_BEGIN)
         accept(token)
         push!(reader.stack, :inline_table)
+        return token
     else
         parse_error("found no value after '='", reader.linenum)
     end
-    return nothing
+end
+
+function alltokens(str::AbstractString)
+    tokens = Token[]
+    reader = StreamReader(IOBuffer(str))
+    while true
+        token = parsetoken(reader)
+        if token.kind == :eof
+            break
+        else
+            push!(tokens, token)
+        end
+    end
+    return tokens
 end
 
 function parse(str::AbstractString)
