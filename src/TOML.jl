@@ -241,6 +241,8 @@ function tokenname(token::Token)
         return "quoted key"
     elseif token.kind == :eof
         return "end of file"
+    elseif token.kind == :equal
+        return "'='"
     elseif token.kind == :single_bracket_left
         return "'['"
     elseif token.kind == :single_bracket_right
@@ -543,6 +545,8 @@ function parsetoken(reader::StreamReader)
                 if token.kind ∈ (:bare_key, :quoted_key)
                     accept(token)
                     peektoken(reader).kind == :whitespace && accept(readtoken(reader))
+                else
+                    parse_error("unexpected token $(tokenname(token))", reader.linenum)
                 end
             end
             if token.kind != close
