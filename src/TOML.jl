@@ -415,10 +415,10 @@ function parsetoken(reader::StreamReader)
         return popfirst!(reader.parsequeue)
     end
     accept(token) = push!(reader.parsequeue, token)
-    top() = isempty(reader.stack) ? :none : reader.stack[end]
     stack = reader.stack
+    top = isempty(stack) ? :none : stack[end]
     token = peektoken(reader)
-    if top() == :inline_array
+    if top == :inline_array
         if token.kind ∈ (:comment, :whitespace, :newline)
             readtoken(reader)
             return token
@@ -448,9 +448,9 @@ function parsetoken(reader::StreamReader)
             end
             return token
         else
-            throw_parse_error("unexpected token at line $(reader.linenum)")
+            parse_error("unexpected token", reader.linenum)
         end
-    elseif top() == :inline_table
+    elseif top == :inline_table
         if token.kind == :whitespace
             readtoken(reader)
             return token
@@ -469,7 +469,7 @@ function parsetoken(reader::StreamReader)
             elseif peektoken(reader).kind ∈ (:curly_brace_right, :bare_key, :quoted_key, :whitespace)
                 # ok
             else
-                throw_parse_error("unexpected token")
+                parse_error("unexpected token", reader.linenum)
             end
             return token
         else

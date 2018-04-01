@@ -312,6 +312,7 @@ tokens = alltokens("""
 
 @test_throws TOML.ParseError("line feed (LF) is expected after carriage return (CR) at line 1") alltokens("foo=100\r")
 @test_throws TOML.ParseError("invalid value format at line 1") alltokens("x = p")
+@test_throws TOML.ParseError("invalid value format at line 1") alltokens("x = [,1]")
 @test_throws TOML.ParseError("unexpected character '!' at line 1") alltokens("!")
 @test_throws TOML.ParseError("unexpected character ',' at line 1") alltokens("x,")
 @test_throws TOML.ParseError("found no value after '=' at line 1") alltokens("x=")
