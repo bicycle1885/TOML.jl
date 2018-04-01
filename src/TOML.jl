@@ -241,6 +241,14 @@ function tokenname(token::Token)
         return "quoted key"
     elseif token.kind == :eof
         return "end of file"
+    elseif token.kind == :single_bracket_left
+        return "'['"
+    elseif token.kind == :single_bracket_right
+        return "']'"
+    elseif token.kind == :double_brackets_left
+        return "'[['"
+    elseif token.kind == :double_brackets_right
+        return "']]'"
     else
         # fallback
         return string(token.kind)
@@ -522,13 +530,13 @@ function parsetoken(reader::StreamReader)
                 accept(token)
                 peektoken(reader).kind == :whitespace && accept(readtoken(reader))
             else
-                parse_error("unexpected token", reader.linenum)
+                parse_error("unexpected token $(tokenname(token))", reader.linenum)
             end
             while (token = readtoken(reader)).kind != close
                 if token.kind == :dot
                     accept(token)
                 else
-                    parse_error("unexpected token", reader.linenum)
+                    parse_error("unexpected token $(tokenname(token))", reader.linenum)
                 end
                 token = readtoken(reader)
                 token.kind == :whitespace && (accept(token); token = readtoken(reader))

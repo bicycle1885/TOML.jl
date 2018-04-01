@@ -318,6 +318,7 @@ tokens = alltokens("""
 @test_throws TOML.ParseError("found no value after '=' at line 1") alltokens("x=")
 @test_throws TOML.ParseError("'=' is expected at line 1") alltokens("x")
 @test_throws TOML.ParseError("unexpected bare key at line 1") alltokens("foo=100 bar=200")
+@test_throws TOML.ParseError("unexpected token ']' at line 1") alltokens("[]")
 
 data = TOML.parse("")
 @test data isa Dict
