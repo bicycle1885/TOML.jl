@@ -310,3 +310,36 @@ tokens = alltokens("""
     Token(:newline, "\n"),
 ]
 
+data = TOML.parse("")
+@test data isa Dict
+@test isempty(data)
+
+data = TOML.parse("foo = 100")
+@test data isa Dict
+@test data["foo"] == 100
+
+data = TOML.parse("foo = 3.14\nhoge = 'ga'\n")
+@test data isa Dict
+@test data["foo"] == 3.14
+@test data["hoge"] == "ga"
+
+data = TOML.parse("foo = []")
+@test isempty(data["foo"])
+
+data = TOML.parse("foo = [1, 2]")
+@test data["foo"] == [1, 2]
+
+data = TOML.parse("foo = {hoge = 1.23, piyo = 'abc'}")
+@test data["foo"] isa Dict
+@test data["foo"]["hoge"] == 1.23
+@test data["foo"]["piyo"] == "abc"
+
+data = TOML.parse("""
+name = 'aaa'
+[daba]
+nana = 123
+me=2.1
+""")
+@test data["name"] == "aaa"
+@test data["daba"]["nana"] == 123
+@test data["daba"]["me"] == 2.1
