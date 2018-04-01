@@ -243,6 +243,8 @@ function tokendesc(token::Token)
         return "end of file"
     elseif token.kind == :comma
         return "','"
+    elseif token.kind == :dot
+        return "'.'"
     elseif token.kind == :equal
         return "'='"
     elseif token.kind == :single_bracket_left
@@ -325,7 +327,7 @@ struct ParseError <: Exception
 end
 
 parse_error(msg, linenum) = throw(ParseError("$(msg) at line $(linenum)"))
-unexpectedtoken(token, linenum) = parse_error("unexpected $(tokendesc(token))", linenum)
+unexpectedtoken(token, linenum) = parse_error("unexpected $(tokendesc(token))", token.kind == :newline ? linenum - 1 : linenum)
 
 function readtoken(reader::StreamReader)
     if !isempty(reader.queue)
@@ -508,7 +510,7 @@ function parsetoken(reader::StreamReader)
             elseif peektoken(reader).kind ∈ (:curly_brace_right, :bare_key, :quoted_key, :whitespace)
                 # ok
             else
-                parse_error("unexpected token", reader.linenum)
+                unexpectedtoken(token, reader.linenum)
             end
             return token
         else
@@ -568,7 +570,7 @@ function parsetoken(reader::StreamReader)
             return TOKEN_ARRAY_BEGIN
         end
     else
-        parse_error("unexpected token", reader.linenum)
+        unexpectedtoken(token, reader.linenum)
     end
 end
 

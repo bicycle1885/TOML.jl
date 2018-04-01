@@ -310,20 +310,27 @@ tokens = alltokens("""
     Token(:newline, "\n"),
 ]
 
-@test_throws TOML.ParseError("line feed (LF) is expected after carriage return (CR) at line 1") alltokens("foo=100\r")
 @test_throws TOML.ParseError("unexpected '!' at line 1") alltokens("!")
 @test_throws TOML.ParseError("unexpected end of file at line 1") alltokens("x")
 @test_throws TOML.ParseError("unexpected end of file at line 1") alltokens("x=")
 @test_throws TOML.ParseError("unexpected ',' at line 1") alltokens("x,")
 @test_throws TOML.ParseError("invalid value format at line 1") alltokens("x = p")
 @test_throws TOML.ParseError("invalid value format at line 1") alltokens("x = [,1]")
+@test_throws TOML.ParseError("unexpected newline at line 1") alltokens("x=\n10")
 @test_throws TOML.ParseError("unexpected bare key 'bar' at line 1") alltokens("foo=100 bar=200")
 @test_throws TOML.ParseError("unexpected ']' at line 1") alltokens("[]")
 @test_throws TOML.ParseError("unexpected ']' at line 1") alltokens("[foo.]")
 @test_throws TOML.ParseError("unexpected '=' at line 1") alltokens("[foo=]")
+@test_throws TOML.ParseError("unexpected ']]' at line 1") alltokens("[foo]]")
+@test_throws TOML.ParseError("unexpected ']' at line 1") alltokens("[[hoge]")
+@test_throws TOML.ParseError("unexpected ']]' at line 1") alltokens("[[hoge.]]")
 @test_throws TOML.ParseError("unexpected end of file at line 1") alltokens("[foo")
+@test_throws TOML.ParseError("unexpected ']' at line 1") alltokens("x=[100]]")
+@test_throws TOML.ParseError("unexpected end of file at line 1") alltokens("x=[100")
 @test_throws TOML.ParseError("unexpected '}' at line 1") alltokens("x={foo}")
 @test_throws TOML.ParseError("unexpected ',' at line 1") alltokens("x={,foo=100}")
+@test_throws TOML.ParseError("unexpected '.' at line 1") alltokens("x={10.0=10}")
+@test_throws TOML.ParseError("line feed (LF) is expected after carriage return (CR) at line 1") alltokens("foo=100\r")
 
 data = TOML.parse("")
 @test data isa Dict
