@@ -262,10 +262,12 @@ function readtoken(reader::StreamReader)
         elseif iskeychar(char)  # bare key
             n = scanwhile(iskeychar, input, buffer)
             return Token(:bare_key, taketext!(buffer, n))
-        elseif char == '"'  # quoted key
-            # FIXME: this is not perfect
-            n = scanwhile(c -> c != '"', input, buffer; offset=1)
-            return Token(:quoted_key, taketext!(buffer, n+2))
+        elseif char == '"' || char == '\''  # quoted key
+            n = scanpattern(char == '"' ? RE_BASIC_STRING : RE_LITERAL_STRING, input, buffer)
+            if n < 2  # the minimum quoted key is "" or ''
+                parse_error("invalid quoted key", reader.linenum)
+            end
+            return Token(:quoted_key, taketext!(buffer, n))
         elseif char == '#'  # comment
             n = scanwhile(c -> c != '\r' && c != '\n', input, buffer)
             return Token(:comment, taketext!(buffer, n))

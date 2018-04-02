@@ -80,6 +80,26 @@ bar=false
 ]
 
 tokens = alltokens("""
+"foo"=100
+""")
+@test tokens == [
+ TOML.Token(:quoted_key, "\"foo\""),
+ TOML.Token(:equal, "="),
+ TOML.Token(:integer, "100"),
+ TOML.Token(:newline, "\n"),
+]
+
+tokens = alltokens("""
+'foo'=100
+""")
+@test tokens == [
+ TOML.Token(:quoted_key, "'foo'"),
+ TOML.Token(:equal, "="),
+ TOML.Token(:integer, "100"),
+ TOML.Token(:newline, "\n"),
+]
+
+tokens = alltokens("""
 x = [1,2]
 """)
 @test tokens == [
