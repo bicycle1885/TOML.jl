@@ -108,6 +108,18 @@ const RE_DATETIME = Regex(raw"""
 (?:Z|[+-][0-9]{2}:[0-9]{2})
 """, COMPILE_OPTIONS, MATCH_OPTIONS)
 
+const RE_LOCAL_DATETIME = Regex(raw"""
+^
+# full date
+[0-9]{4}-[0-9]{2}-[0-9]{2}
+# the 'T' or a space (RFC 3339 section 5.6)
+[T ]
+# partial time
+[0-9]{2}:[0-9]{2}:[0-9]{2} (?:\.[0-9]+)?
+# local datetime has no offset
+""", COMPILE_OPTIONS, MATCH_OPTIONS)
+
+
 function scanvalue(input::IO, buffer::Buffer)
     if buffer.p > buffer.p_end
         fillbuffer!(input, buffer)
@@ -169,6 +181,10 @@ function scanvalue(input::IO, buffer::Buffer)
             n = scanpattern(RE_DATETIME, input, buffer)
             if n ≥ 0
                 return :datetime, n
+            end
+            n = scanpattern(RE_LOCAL_DATETIME, input, buffer)
+            if n ≥ 0
+                return :local_datetime, n
             end
         end
         n = scanpattern(RE_INTEGER, input, buffer)

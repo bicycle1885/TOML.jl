@@ -8,6 +8,7 @@ using Test
 @test TOML.scanvalue(IOBuffer("123.0"), TOML.Buffer()) == (:float, 5)
 @test TOML.scanvalue(IOBuffer("true"), TOML.Buffer()) == (:boolean, 4)
 @test TOML.scanvalue(IOBuffer("1979-05-27T00:32:00-07:00"), TOML.Buffer()) == (:datetime, 25)
+@test TOML.scanvalue(IOBuffer("1979-05-27T07:32:00"), TOML.Buffer()) == (:local_datetime, 19)
 @test TOML.scanvalue(IOBuffer("abracadabra"), TOML.Buffer()) == (:novalue, 0)
 
 function alltokens(str)

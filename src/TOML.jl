@@ -117,7 +117,8 @@ isinteger(token::Token) = token.kind == :integer || token.kind == :binary || tok
 isfloat(token::Token) = token.kind == :float
 isboolean(token::Token) = token.kind == :boolean
 isdatetime(token::Token) = token.kind == :datetime
-isatomicvalue(token::Token) = isstring(token) || isinteger(token) || isfloat(token) || isboolean(token) || isdatetime(token)
+islocaldatetime(token::Token) = token.kind == :local_datetime
+isatomicvalue(token::Token) = isstring(token) || isinteger(token) || isfloat(token) || isboolean(token) || isdatetime(token) || islocaldatetime(token)
 iscontainer(token::Token) = token.kind ∈ (:single_bracket_left, :curly_brace_left)
 iskey(token::Token) = token.kind == :bare_key || token.kind == :quoted_key
 iseof(token::Token) = token.kind == :eof
