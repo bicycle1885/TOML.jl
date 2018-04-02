@@ -100,8 +100,8 @@ const RE_DATETIME = Regex(raw"""
 ^
 # full date
 [0-9]{4}-[0-9]{2}-[0-9]{2}
-# the 'T'
-T
+# the 'T' or a space (RFC 3339 section 5.6)
+[T ]
 # partial time
 [0-9]{2}:[0-9]{2}:[0-9]{2} (?:\.[0-9]+)?
 # time offset
