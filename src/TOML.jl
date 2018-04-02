@@ -456,8 +456,14 @@ end
 function parsekeyvalue(reader::StreamReader)
     # (bare_key | quoted_key) whitespace? '=' whitespace? (atomic_value | '[' | '{')
     accept(token) = push!(reader.parsequeue, token)
+    emitkey = false
+    @label readkey
     token = readtoken(reader)
-    @assert token.kind ∈ (:bare_key, :quoted_key)
+    if !iskey(token)
+        unexpectedtoken(token, reader.linenum)
+    elseif emitkey
+        accept(token)
+    end
     token = readtoken(reader)
     if token.kind == :whitespace
         accept(token)
@@ -465,6 +471,14 @@ function parsekeyvalue(reader::StreamReader)
     end
     if token.kind == :equal
         accept(token)
+    elseif token.kind == :dot
+        # dotted keys
+        accept(token)
+        if peektoken(reader).kind == :whitespace
+            accept(readtoken(reader))
+        end
+        emitkey = true
+        @goto readkey
     else
         unexpectedtoken(token, reader.linenum)
     end

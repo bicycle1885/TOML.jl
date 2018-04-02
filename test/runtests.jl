@@ -100,6 +100,28 @@ tokens = alltokens("""
 ]
 
 tokens = alltokens("""
+foo.bar=100
+""") == [
+ TOML.Token(:bare_key, "foo"),
+ TOML.Token(:dot, "."),
+ TOML.Token(:bare_key, "bar"),
+ TOML.Token(:equal, "="),
+ TOML.Token(:integer, "10"),
+]
+
+tokens = alltokens("""
+foo .  bar=100
+""") == [
+ TOML.Token(:bare_key, "foo"),
+ TOML.Token(:whitespace, " "),
+ TOML.Token(:dot, "."),
+ TOML.Token(:whitespace, "  "),
+ TOML.Token(:bare_key, "bar"),
+ TOML.Token(:equal, "="),
+ TOML.Token(:integer, "10"),
+]
+
+tokens = alltokens("""
 x = [1,2]
 """)
 @test tokens == [
@@ -406,7 +428,7 @@ tokens = alltokens("""
 @test_throws TOML.ParseError("unexpected end of file at line 1") alltokens("x=[100")
 @test_throws TOML.ParseError("unexpected '}' at line 1") alltokens("x={foo}")
 @test_throws TOML.ParseError("unexpected ',' at line 1") alltokens("x={,foo=100}")
-@test_throws TOML.ParseError("unexpected '.' at line 1") alltokens("x={10.0=10}")
+@test_throws TOML.ParseError("unexpected '=' at line 1") alltokens("x={10.=10}")
 @test_throws TOML.ParseError("unexpected newline at line 1") alltokens("x={\nfoo=100}")
 @test_throws TOML.ParseError("line feed (LF) is expected after carriage return (CR) at line 1") alltokens("foo=100\r")
 
