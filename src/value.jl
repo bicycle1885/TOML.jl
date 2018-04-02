@@ -72,7 +72,7 @@ const RE_OCTAL = Regex(raw"""
 ^0o[0-7](?:_?[0-7]+)*
 """, COMPILE_OPTIONS, MATCH_OPTIONS)
 
-const RE_INTEGER = Regex(raw"""
+const RE_DECIMAL = Regex(raw"""
 ^[-+]?(?:0|[1-9](?:_?[0-9]+)*)
 """, COMPILE_OPTIONS, MATCH_OPTIONS)
 
@@ -204,7 +204,7 @@ function scanvalue(input::IO, buffer::Buffer)
                 return :local_time, n
             end
         end
-        n = scanpattern(RE_INTEGER, input, buffer)
+        n = scanpattern(RE_DECIMAL, input, buffer)
         if n ≥ 0
             return :decimal, n
         end
