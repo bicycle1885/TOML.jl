@@ -64,6 +64,10 @@ const RE_MULTILINE_LITERAL_STRING = Regex(raw"""
 '''
 """, COMPILE_OPTIONS, MATCH_OPTIONS)
 
+const RE_BINARY = Regex(raw"""
+^0b[01](?:_?[01]+)*
+""", COMPILE_OPTIONS, MATCH_OPTIONS)
+
 const RE_OCTAL = Regex(raw"""
 ^0o[0-7](?:_?[0-7]+)*
 """, COMPILE_OPTIONS, MATCH_OPTIONS)
@@ -132,7 +136,13 @@ function scanvalue(input::IO, buffer::Buffer)
     elseif UInt8('0') ≤ b1 ≤ UInt8('9') || b1 == UInt8('-') || b1 == UInt8('+')
         if b1 == UInt('0') && ensurebytes!(input, buffer, 2)
             b2 = buffer.data[buffer.p+1]
-            if b2 == UInt8('o')
+            if b2 == UInt8('b')
+                n = scanpattern(RE_BINARY, input, buffer)
+                if n ≥ 0
+                    return :binary, n
+                end
+                @goto novalue
+            elseif b2 == UInt8('o')
                 n = scanpattern(RE_OCTAL, input, buffer)
                 if n ≥ 0
                     return :octal, n

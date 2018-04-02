@@ -113,7 +113,7 @@ const TOKEN_EOF = Token(:eof, "")
 istext(token::Token) = !isempty(token.text)
 isevent(token::Token) = !istext(token)
 isstring(token::Token) = token.kind ∈ (:basic_string, :multiline_basic_string, :literal_string, :multiline_literal_string)
-isinteger(token::Token) = token.kind == :integer || token.kind == :octal || token.kind == :hexadecimal
+isinteger(token::Token) = token.kind == :integer || token.kind == :binary || token.kind == :octal || token.kind == :hexadecimal
 isfloat(token::Token) = token.kind == :float
 isboolean(token::Token) = token.kind == :boolean
 isdatetime(token::Token) = token.kind == :datetime
