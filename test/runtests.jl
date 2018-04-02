@@ -2,15 +2,13 @@ using TOML: Token
 import TOML
 using Test
 
-scan = TOML.scan
-@time scan("\"foo\"")  # measure compile time
-@test scan("\"foo\"") == :basic_string
-@test scan("'foo'") == :literal_string
-@test scan("123") == :integer
-@test scan("123.0") == :float
-@test scan("true") == :boolean
-@test scan("1979-05-27T00:32:00-07:00") == :datetime
-@test scan("abracadabra") == :none
+@test TOML.scanvalue(IOBuffer("\"foo\""), TOML.Buffer()) == (:basic_string, 5)
+@test TOML.scanvalue(IOBuffer("'foo'"), TOML.Buffer()) == (:literal_string, 5)
+@test TOML.scanvalue(IOBuffer("123"), TOML.Buffer()) == (:integer, 3)
+@test TOML.scanvalue(IOBuffer("123.0"), TOML.Buffer()) == (:float, 5)
+@test TOML.scanvalue(IOBuffer("true"), TOML.Buffer()) == (:boolean, 4)
+@test TOML.scanvalue(IOBuffer("1979-05-27T00:32:00-07:00"), TOML.Buffer()) == (:datetime, 25)
+@test TOML.scanvalue(IOBuffer("abracadabra"), TOML.Buffer()) == (:novalue, 0)
 
 function alltokens(str)
     stream = TOML.StreamReader(IOBuffer(str))
@@ -374,7 +372,7 @@ tokens = alltokens("""
 @test_throws TOML.ParseError("unexpected ',' at line 1") alltokens("x,")
 @test_throws TOML.ParseError("invalid value format at line 1") alltokens("x = p")
 @test_throws TOML.ParseError("invalid value format at line 1") alltokens("x = [,1]")
-@test_throws TOML.ParseError("unexpected end of file at line 1") alltokens("x='foo")
+@test_throws TOML.ParseError("invalid value format at line 1") alltokens("x='foo")
 @test_throws TOML.ParseError("unexpected newline at line 1") alltokens("x=\n10")
 @test_throws TOML.ParseError("unexpected bare key 'bar' at line 1") alltokens("foo=100 bar=200")
 @test_throws TOML.ParseError("unexpected ']' at line 1") alltokens("[]")

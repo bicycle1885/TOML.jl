@@ -1,118 +1,5 @@
 module TOML
 
-import Automa
-import Automa.RegExp: @re_str, primitive
-
-const rep = Automa.RegExp.rep
-const opt = Automa.RegExp.opt
-const ++ = *
-
-# Values are a piece of text that may occur:
-# 1. after the '=' mark, or
-# 2. in an array.
-const value_machine = (function()
-    string = let
-        utf8 = (
-            # 1-byte
-            (primitive(0x00:0x7f)) |
-            # 2-byte
-            (primitive(0xc0:0xdf) ++ primitive(0x80:0xbf)) |
-            # 3-byte
-            (primitive(0xe0:0xef) ++ primitive(0x80:0xbf) ++ primitive(0x80:0xbf)) |
-            # 4-byte
-            (primitive(0xf0:0xf7) ++ primitive(0x80:0xbf) ++ primitive(0x80:0xbf) ++ primitive(0x80:0xbf))
-        )
-        #utf8 = primitive(0x00:0xff)
-        control = primitive(0x00:0x1f)
-        escape = re"\\" ++ (re"[btnfr]" | re"\"" | re"\\")
-        hex(n) = ++([re"[0-9A-Fa-f]" for _ in 1:n]...)
-        unicode = re"\\" ++ ((re"u" ++ hex(4)) | (re"U" ++ hex(8)))
-
-        # basic string
-        basic = primitive('"') ++ rep((utf8 \ (control | re"\"" | re"\\")) | escape | unicode) ++ primitive('"')
-        basic.actions[:exit] = [:basic_string]
-
-        tripledquote = primitive("\"\"\"")
-        newline = re"\r?\n"
-
-        # multi-line basic string
-        multiline_basic = tripledquote ++ rep((utf8 \ control) | (opt('"') ++ newline) | escape | unicode) ++ tripledquote
-        multiline_basic.actions[:exit] = [:multiline_basic_string]
-
-        # literal string
-        literal = primitive('\'') ++ rep(utf8 \ control) ++ primitive('\'')
-        literal.actions[:exit] = [:literal_string]
-
-        # multi-line literal string
-        triplesquote = primitive("'''")
-        multiline_literal = triplesquote ++ rep((utf8 \ control) | newline) ++ triplesquote
-        multiline_literal.actions[:exit] = [:multiline_literal_string]
-
-        basic | multiline_basic | literal | multiline_literal
-    end
-
-    integer = re"[-+]?" ++ re"0|[1-9](_?[0-9])*"
-    integer.actions[:exit] = [:integer]
-
-    float = let
-        int = re"[-+]?" ++ re"0|[1-9](_?[0-9])*"
-        fractional = int ++ re"\.(_?[0-9])*"
-        exponent = re"[eE]" ++ int
-        fractional ++ opt(exponent)
-    end
-    float.actions[:exit] = [:float]
-
-    boolean = re"true|false"
-    boolean.actions[:exit] = [:boolean]
-
-    datetime = let
-        twodigits = re"[0-9][0-9]"
-        fourdigits = re"[0-9][0-9][0-9][0-9]"
-
-        time_secfrac = re"\.[0-9]+"
-        time_numoffset = re"[-+]" ++ twodigits ++ re":" ++ twodigits
-        time_offset = re"Z" | time_numoffset
-
-        partial_time = twodigits ++ re":" ++ twodigits ++ re":" ++ twodigits ++ opt(time_secfrac)
-        full_date = fourdigits ++ re"-" ++ twodigits ++ re"-" ++ twodigits
-        full_time = partial_time ++ time_offset
-
-        full_date ++ re"T" ++ full_time
-    end
-    datetime.actions[:exit] = [:datetime]
-
-    value = string | integer | float | boolean | datetime
-
-    lookahead = re"[ \r\n\t,\]}#]?"
-    lookahead.actions[:enter] = [:escape]
-
-    Automa.compile(value ++ lookahead)
-end)()
-
-#write("value.dot", Automa.machine2dot(value_machine))
-#run(`dot -Tsvg -o value.svg value.dot`)
-
-const actions = Dict(
-    :basic_string => :(kind = :basic_string),
-    :multiline_basic_string => :(kind = :multiline_basic_string),
-    :literal_string => :(kind = :literal_string),
-    :multiline_literal_string => :(kind = :multiline_literal_string),
-    :integer => :(kind = :integer),
-    :float => :(kind = :float),
-    :boolean => :(kind = :boolean),
-    :datetime => :(kind = :datetime),
-    :escape => :(@escape),
-)
-
-context = Automa.CodeGenContext(generator=:table)
-@eval function scan(data)
-    kind = :none
-    $(Automa.generate_init_code(context, value_machine))
-    p_end = p_eof = sizeof(data)
-    $(Automa.generate_exec_code(context, value_machine, actions))
-    return kind
-end
-
 mutable struct Buffer
     data::Vector{UInt8}
     p::Int
@@ -191,6 +78,8 @@ function consume!(buffer::Buffer, size::Int)
     buffer.p += size
     return
 end
+
+include("value.jl")
 
 struct Token
     kind::Symbol
@@ -293,7 +182,6 @@ function value(token::Token)
     end
 end
 
-
 mutable struct StreamReader
     input::IO
     buffer::Buffer
@@ -308,16 +196,6 @@ end
 
 function StreamReader(input::IO)
     return StreamReader(input, Buffer(), 1, false, Symbol[], Token[], Token[])
-end
-
-context = Automa.CodeGenContext(generator=:goto)
-@eval function scanvalue(data::Vector{UInt8}, p::Int, p_end::Int, p_eof::Int, cs::Int)
-    kind = :incomplete
-    $(Automa.generate_exec_code(context, value_machine, actions))
-    if cs ≥ 0 && kind != :incomplete && !(0 ≤ p_eof < p)
-        p -= 1  # cancel look-ahead
-    end
-    return kind, p, cs
 end
 
 iswhitespace(char::Char) = char == ' ' || char == '\t'
@@ -369,25 +247,33 @@ function readtoken(reader::StreamReader)
                 reader.expectvalue = false
                 return Token(:curly_brace_left, "{")
             end
-            kind = :undef
-            p = buffer.p
-            cs = 1
-            while true
-                kind, p, cs = scanvalue(buffer.data, p, buffer.p_end, buffer.p_eof, cs)
-                if cs < 0
-                    parse_error("invalid value format", reader.linenum)
-                elseif cs > 0 && 0 ≤ buffer.p_eof < p
-                    parse_error("unexpected end of file", reader.linenum)
-                elseif kind == :incomplete
-                    fillbuffer!(input, buffer)
-                    p = buffer.p
-                    cs = 1
-                else
-                    break
-                end
+            #kind = :undef
+            kind, n = scanvalue(input, buffer)
+            if kind == :novalue
+                parse_error("invalid value format", reader.linenum)
+            elseif kind == :eof
+                parse_error("unexpected end of file", reader.linenum)
             end
             reader.expectvalue = false
-            return Token(kind, taketext!(buffer, p - buffer.p))
+            return Token(kind, taketext!(buffer, n))
+            #p = buffer.p
+            #cs = 1
+            #while true
+            #    kind, p, cs = scanvalue(buffer.data, p, buffer.p_end, buffer.p_eof, cs)
+            #    if cs < 0
+            #        parse_error("invalid value format", reader.linenum)
+            #    elseif 0 ≤ buffer.p_eof < p
+            #        parse_error("unexpected end of file", reader.linenum)
+            #    elseif kind == :incomplete
+            #        fillbuffer!(input, buffer)
+            #        p = buffer.p
+            #        cs = 1
+            #    else
+            #        break
+            #    end
+            #end
+            #reader.expectvalue = false
+            #return Token(kind, taketext!(buffer, p - buffer.p))
         elseif char == '='
             consume!(buffer, 1)
             reader.expectvalue = true
