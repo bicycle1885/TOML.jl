@@ -55,8 +55,12 @@ const RE_LITERAL_STRING = Regex(raw"""
 const RE_MULTILINE_LITERAL_STRING = Regex(raw"""
 ^
 '''
+(?:
     # non-control character
-    [^\x00-\x1f]*?
+    [^\x00-\x1f] |
+    # newline (LF or CRLF)
+    \r?\n
+)*?
 '''
 """, COMPILE_OPTIONS, MATCH_OPTIONS)
 

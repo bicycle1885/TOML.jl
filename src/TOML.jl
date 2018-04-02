@@ -505,15 +505,22 @@ function parsekeyvalue(reader::StreamReader)
     end
 end
 
-function alltokens(str::AbstractString)
+function debug(str::AbstractString)
     tokens = Token[]
     reader = StreamReader(IOBuffer(str))
+    lasttoken = nothing
     while true
-        token = parsetoken(reader)
-        if token.kind == :eof
-            break
-        else
-            push!(tokens, token)
+        try
+            token = parsetoken(reader)
+            if token.kind == :eof
+                break
+            else
+                push!(tokens, token)
+            end
+            lasttoken = token
+        catch
+            @show lasttoken
+            rethrow()
         end
     end
     return tokens
