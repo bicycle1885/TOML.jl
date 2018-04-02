@@ -116,9 +116,18 @@ const RE_LOCAL_DATETIME = Regex(raw"""
 [T ]
 # partial time
 [0-9]{2}:[0-9]{2}:[0-9]{2} (?:\.[0-9]+)?
-# local datetime has no offset
 """, COMPILE_OPTIONS, MATCH_OPTIONS)
 
+const RE_LOCAL_DATE = Regex(raw"""
+^
+# full date
+[0-9]{4}-[0-9]{2}-[0-9]{2}
+""", COMPILE_OPTIONS, MATCH_OPTIONS)
+
+const RE_LOCAL_TIME = Regex(raw"""
+# partial time
+[0-9]{2}:[0-9]{2}:[0-9]{2} (?:\.[0-9]+)?
+""", COMPILE_OPTIONS, MATCH_OPTIONS)
 
 function scanvalue(input::IO, buffer::Buffer)
     if buffer.p > buffer.p_end
@@ -185,6 +194,14 @@ function scanvalue(input::IO, buffer::Buffer)
             n = scanpattern(RE_LOCAL_DATETIME, input, buffer)
             if n ≥ 0
                 return :local_datetime, n
+            end
+            n = scanpattern(RE_LOCAL_DATE, input, buffer)
+            if n ≥ 0
+                return :local_date, n
+            end
+            n = scanpattern(RE_LOCAL_TIME, input, buffer)
+            if n ≥ 0
+                return :local_time, n
             end
         end
         n = scanpattern(RE_INTEGER, input, buffer)
