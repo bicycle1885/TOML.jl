@@ -233,12 +233,13 @@ function scanpattern(re::Regex, input::IO, buffer::Buffer)
         fillbuffer!(input, buffer)
     end
     @label match
-    #@show buffer.data[buffer.p:buffer.p_end]
+    #@show String(buffer.data[buffer.p:buffer.p_end])
     rc = ccall(
         (:pcre2_match_8, PCRE.PCRE_LIB),
         Cint,
         (Ptr{Cvoid}, Ptr{UInt8}, Csize_t, Csize_t, Cuint, Ptr{Cvoid}, Ptr{Cvoid}),
         re.regex, pointer(buffer.data, buffer.p), buffer.p_end - buffer.p + 1, 0, re.match_options, re.match_data, PCRE.MATCH_CONTEXT[])
+    #@show rc
     if rc > 0
         len = Ref{Csize_t}(0)
         rc = ccall(

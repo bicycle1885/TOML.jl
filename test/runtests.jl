@@ -514,6 +514,14 @@ tokens = alltokens("""
 @test_throws TOML.ParseError("unexpected newline at line 1") alltokens("x={\nfoo=100}")
 @test_throws TOML.ParseError("line feed (LF) is expected after carriage return (CR) at line 1") alltokens("foo=100\r")
 
+using Random
+randutf8(n) = String(rand(['α', 'あ', '𐍈'], n))
+srand(1234)
+@test all(map(0:200) do n
+    s = string("#", randutf8(n))
+    alltokens(s) == [Token(:comment, s)]
+end)
+
 data = TOML.parse("")
 @test data isa Dict
 @test isempty(data)
