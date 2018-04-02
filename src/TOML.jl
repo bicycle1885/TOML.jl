@@ -247,7 +247,6 @@ function readtoken(reader::StreamReader)
                 reader.expectvalue = false
                 return Token(:curly_brace_left, "{")
             end
-            #kind = :undef
             kind, n = scanvalue(input, buffer)
             if kind == :novalue
                 parse_error("invalid value format", reader.linenum)
@@ -256,24 +255,6 @@ function readtoken(reader::StreamReader)
             end
             reader.expectvalue = false
             return Token(kind, taketext!(buffer, n))
-            #p = buffer.p
-            #cs = 1
-            #while true
-            #    kind, p, cs = scanvalue(buffer.data, p, buffer.p_end, buffer.p_eof, cs)
-            #    if cs < 0
-            #        parse_error("invalid value format", reader.linenum)
-            #    elseif 0 ≤ buffer.p_eof < p
-            #        parse_error("unexpected end of file", reader.linenum)
-            #    elseif kind == :incomplete
-            #        fillbuffer!(input, buffer)
-            #        p = buffer.p
-            #        cs = 1
-            #    else
-            #        break
-            #    end
-            #end
-            #reader.expectvalue = false
-            #return Token(kind, taketext!(buffer, p - buffer.p))
         elseif char == '='
             consume!(buffer, 1)
             reader.expectvalue = true
