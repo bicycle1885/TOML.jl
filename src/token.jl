@@ -39,6 +39,12 @@ function tokendesc(token::Token)
         return "string"
     elseif token.kind == :decimal
         return "decimal integer"
+    elseif token.kind == :binary
+        return "binary integer"
+    elseif token.kind == :octal
+        return "octal integer"
+    elseif token.kind == :hexadecimal
+        return "hexadecimal integer"
     elseif token.kind == :float
         return "floating-point number"
     elseif token.kind == :boolean
