@@ -239,6 +239,35 @@ x = [
 ]
 
 tokens = alltokens("""
+x = [
+  1,
+  2, # comment
+]
+""")
+@test tokens == [
+ TOML.Token(:bare_key, "x"),
+ TOML.Token(:whitespace, " "),
+ TOML.Token(:equal, "="),
+ TOML.Token(:whitespace, " "),
+ TOML.Token(:inline_array_begin, ""),
+ TOML.Token(:single_bracket_left, "["),
+ TOML.Token(:newline, "\n"),
+ TOML.Token(:whitespace, "  "),
+ TOML.Token(:integer, "1"),
+ TOML.Token(:comma, ","),
+ TOML.Token(:newline, "\n"),
+ TOML.Token(:whitespace, "  "),
+ TOML.Token(:integer, "2"),
+ TOML.Token(:comma, ","),
+ TOML.Token(:whitespace, " "),
+ TOML.Token(:comment, "# comment"),
+ TOML.Token(:newline, "\n"),
+ TOML.Token(:single_bracket_right, "]"),
+ TOML.Token(:inline_array_end, ""),
+ TOML.Token(:newline, "\n"),
+]
+
+tokens = alltokens("""
 x = [ [ 1, 2 ], [3, 4, 5] ]
 """)
 @test tokens == [

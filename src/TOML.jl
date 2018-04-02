@@ -244,6 +244,9 @@ function readtoken(reader::StreamReader)
                 reader.linenum += 1
                 return Token(:newline, "\n")
             end
+        elseif char == '#'  # comment
+            n = scanwhile(c -> c != '\r' && c != '\n', input, buffer)
+            return Token(:comment, taketext!(buffer, n))
         elseif reader.expectvalue
             if char == '['
                 consume!(buffer, 1)
@@ -277,9 +280,6 @@ function readtoken(reader::StreamReader)
                 parse_error("invalid quoted key", reader.linenum)
             end
             return Token(:quoted_key, taketext!(buffer, n))
-        elseif char == '#'  # comment
-            n = scanwhile(c -> c != '\r' && c != '\n', input, buffer)
-            return Token(:comment, taketext!(buffer, n))
         elseif char == '['  # table or array of tables
             consume!(buffer, 1)
             if peekchar(input, buffer) == ('[', 1)
@@ -352,6 +352,9 @@ function parsetoken(reader::StreamReader)
         elseif token.kind == :single_bracket_right
             readtoken(reader)
             pop!(stack)
+            if isempty(stack) || stack[end] != :inline_array
+                reader.expectvalue = false
+            end
             accept(TOKEN_INLINE_ARRAY_END)
             while peektoken(reader).kind ∈ (:comment, :whitespace, :newline)
                 accept(readtoken(reader))
