@@ -85,6 +85,26 @@ foo=3.14
 ]
 
 tokens = alltokens("""
+foo=inf
+""")
+@test tokens == [
+    Token(:bare_key, "foo"),
+    Token(:equal, "="),
+    Token(:float, "inf"),
+    Token(:newline, "\n"),
+]
+
+tokens = alltokens("""
+foo=nan
+""")
+@test tokens == [
+    Token(:bare_key, "foo"),
+    Token(:equal, "="),
+    Token(:float, "nan"),
+    Token(:newline, "\n"),
+]
+
+tokens = alltokens("""
 foo=6.022e23
 """)
 @test tokens == [

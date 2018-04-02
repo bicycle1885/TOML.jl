@@ -521,6 +521,7 @@ function debug(str::AbstractString)
     while true
         try
             token = parsetoken(reader)
+            #println(token)
             if token.kind == :eof
                 break
             else

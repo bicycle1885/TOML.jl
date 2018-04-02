@@ -86,7 +86,11 @@ const RE_FLOAT = Regex(raw"""
     # exponent
     [-+]? (?:0|[1-9](?:_?[0-9]+)*) (?:\.[0-9](?:_?[0-9]+)*)? [eE] [-+]? (?:0|[1-9](?:_?[0-9]+)*) |
     # fractional
-    [-+]? (?:0|[1-9](?:_?[0-9]+)*)    \.[0-9](?:_?[0-9]+)*
+    [-+]? (?:0|[1-9](?:_?[0-9]+)*)    \.[0-9](?:_?[0-9]+)* |
+    # infinity
+    [-+]? inf |
+    # not a number
+    [-+]? nan
 )
 """, COMPILE_OPTIONS, MATCH_OPTIONS)
 
@@ -170,6 +174,12 @@ function scanvalue(input::IO, buffer::Buffer)
         n = scanpattern(RE_INTEGER, input, buffer)
         if n ≥ 0
             return :integer, n
+        end
+    elseif b1 == UInt8('i') || b1 == UInt('n') # inf / nan
+        # float?
+        n = scanpattern(RE_FLOAT, input, buffer)
+        if n ≥ 0
+            return :float, n
         end
     elseif b1 == UInt8('t') || b1 == UInt8('f')
         # boolean?
