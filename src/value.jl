@@ -68,6 +68,10 @@ const RE_INTEGER = Regex(raw"""
 ^[-+]?(?:0|[1-9](?:_?[0-9]+)*)
 """, COMPILE_OPTIONS, MATCH_OPTIONS)
 
+const RE_HEXADECIMAL = Regex(raw"""
+^0x[0-9A-Fa-f](?:_?[0-9A-Fa-f]+)*
+""", COMPILE_OPTIONS, MATCH_OPTIONS)
+
 const RE_FLOAT = Regex(raw"""
 ^
 (?:
@@ -122,6 +126,16 @@ function scanvalue(input::IO, buffer::Buffer)
             return :literal_string, n
         end
     elseif UInt8('0') ≤ b1 ≤ UInt8('9') || b1 == UInt8('-') || b1 == UInt8('+')
+        if b1 == UInt('0') && ensurebytes!(input, buffer, 2)
+            b2 = buffer.data[buffer.p+1]
+            if b2 == UInt8('x')
+                n = scanpattern(RE_HEXADECIMAL, input, buffer)
+                if n ≥ 0
+                    return :hexadecimal, n
+                end
+                @goto novalue
+            end
+        end
         # float, datetime or integer?
         n = scanpattern(RE_FLOAT, input, buffer)
         if n ≥ 0
@@ -144,6 +158,7 @@ function scanvalue(input::IO, buffer::Buffer)
             return :boolean, n
         end
     end
+    @label novalue
     return :novalue, 0
 end
 

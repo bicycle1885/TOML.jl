@@ -41,6 +41,15 @@ function fillbuffer!(input::IO, buffer::Buffer)
     end
 end
 
+function ensurebytes!(input::IO, buffer::Buffer, n::Int)
+    if buffer.p_end - buffer.p + 1 ≥ n
+        # ok
+        return true
+    end
+    fillbuffer!(input, buffer)
+    return buffer.p_end - buffer.p + 1 ≥ n
+end
+
 function peekchar(input::IO, buffer::Buffer; offset::Int=0)
     # TODO: support unicode
     if buffer.p + offset > buffer.p_end
@@ -104,7 +113,7 @@ const TOKEN_EOF = Token(:eof, "")
 istext(token::Token) = !isempty(token.text)
 isevent(token::Token) = !istext(token)
 isstring(token::Token) = token.kind ∈ (:basic_string, :multiline_basic_string, :literal_string, :multiline_literal_string)
-isinteger(token::Token) = token.kind == :integer
+isinteger(token::Token) = token.kind == :integer || token.kind == :hexadecimal
 isfloat(token::Token) = token.kind == :float
 isboolean(token::Token) = token.kind == :boolean
 isdatetime(token::Token) = token.kind == :datetime

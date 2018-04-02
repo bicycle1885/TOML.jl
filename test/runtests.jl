@@ -45,6 +45,16 @@ foo=100
 ]
 
 tokens = alltokens("""
+foo=0xDEADBEEF
+""")
+@test tokens == [
+    Token(:bare_key, "foo"),
+    Token(:equal, "="),
+    Token(:hexadecimal, "0xDEADBEEF"),
+    Token(:newline, "\n"),
+]
+
+tokens = alltokens("""
 foo=3.14
 """)
 @test tokens == [
