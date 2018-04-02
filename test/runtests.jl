@@ -4,7 +4,7 @@ using Test
 
 @test TOML.scanvalue(IOBuffer("\"foo\""), TOML.Buffer()) == (:basic_string, 5)
 @test TOML.scanvalue(IOBuffer("'foo'"), TOML.Buffer()) == (:literal_string, 5)
-@test TOML.scanvalue(IOBuffer("123"), TOML.Buffer()) == (:integer, 3)
+@test TOML.scanvalue(IOBuffer("123"), TOML.Buffer()) == (:decimal, 3)
 @test TOML.scanvalue(IOBuffer("123.0"), TOML.Buffer()) == (:float, 5)
 @test TOML.scanvalue(IOBuffer("true"), TOML.Buffer()) == (:boolean, 4)
 @test TOML.scanvalue(IOBuffer("1979-05-27T00:32:00-07:00"), TOML.Buffer()) == (:datetime, 25)
@@ -43,7 +43,7 @@ foo=100
 @test tokens == [
     Token(:bare_key, "foo"),
     Token(:equal, "="),
-    Token(:integer, "100"),
+    Token(:decimal, "100"),
     Token(:newline, "\n"),
 ]
 
@@ -138,7 +138,7 @@ tokens = alltokens("""
 @test tokens == [
  TOML.Token(:quoted_key, "\"foo\""),
  TOML.Token(:equal, "="),
- TOML.Token(:integer, "100"),
+ TOML.Token(:decimal, "100"),
  TOML.Token(:newline, "\n"),
 ]
 
@@ -148,7 +148,7 @@ tokens = alltokens("""
 @test tokens == [
  TOML.Token(:quoted_key, "'foo'"),
  TOML.Token(:equal, "="),
- TOML.Token(:integer, "100"),
+ TOML.Token(:decimal, "100"),
  TOML.Token(:newline, "\n"),
 ]
 
@@ -159,7 +159,7 @@ foo.bar=100
  TOML.Token(:dot, "."),
  TOML.Token(:bare_key, "bar"),
  TOML.Token(:equal, "="),
- TOML.Token(:integer, "10"),
+ TOML.Token(:decimal, "10"),
 ]
 
 tokens = alltokens("""
@@ -171,7 +171,7 @@ foo .  bar=100
  TOML.Token(:whitespace, "  "),
  TOML.Token(:bare_key, "bar"),
  TOML.Token(:equal, "="),
- TOML.Token(:integer, "10"),
+ TOML.Token(:decimal, "10"),
 ]
 
 tokens = alltokens("""
@@ -184,9 +184,9 @@ x = [1,2]
     Token(:whitespace, " "),
     Token(:inline_array_begin, ""),
     Token(:single_bracket_left, "["),
-    Token(:integer, "1"),
+    Token(:decimal, "1"),
     Token(:comma, ","),
-    Token(:integer, "2"),
+    Token(:decimal, "2"),
     Token(:single_bracket_right, "]"),
     Token(:inline_array_end, ""),
     Token(:newline, "\n"),
@@ -202,9 +202,9 @@ x = [1,2,]
     Token(:whitespace, " "),
     Token(:inline_array_begin, ""),
     Token(:single_bracket_left, "["),
-    Token(:integer, "1"),
+    Token(:decimal, "1"),
     Token(:comma, ","),
-    Token(:integer, "2"),
+    Token(:decimal, "2"),
     Token(:comma, ","),
     Token(:single_bracket_right, "]"),
     Token(:inline_array_end, ""),
@@ -226,11 +226,11 @@ x = [
     Token(:single_bracket_left, "["),
     Token(:newline, "\n"),
     Token(:whitespace, "    "),
-    Token(:integer, "1"),
+    Token(:decimal, "1"),
     Token(:comma, ","),
     Token(:newline, "\n"),
     Token(:whitespace, "    "),
-    Token(:integer, "2"),
+    Token(:decimal, "2"),
     Token(:comma, ","),
     Token(:newline, "\n"),
     Token(:single_bracket_right, "]"),
@@ -253,11 +253,11 @@ x = [
  TOML.Token(:single_bracket_left, "["),
  TOML.Token(:newline, "\n"),
  TOML.Token(:whitespace, "  "),
- TOML.Token(:integer, "1"),
+ TOML.Token(:decimal, "1"),
  TOML.Token(:comma, ","),
  TOML.Token(:newline, "\n"),
  TOML.Token(:whitespace, "  "),
- TOML.Token(:integer, "2"),
+ TOML.Token(:decimal, "2"),
  TOML.Token(:comma, ","),
  TOML.Token(:whitespace, " "),
  TOML.Token(:comment, "# comment"),
@@ -281,10 +281,10 @@ x = [ [ 1, 2 ], [3, 4, 5] ]
     Token(:inline_array_begin, ""),
     Token(:single_bracket_left, "["),
     Token(:whitespace, " "),
-    Token(:integer, "1"),
+    Token(:decimal, "1"),
     Token(:comma, ","),
     Token(:whitespace, " "),
-    Token(:integer, "2"),
+    Token(:decimal, "2"),
     Token(:whitespace, " "),
     Token(:single_bracket_right, "]"),
     Token(:inline_array_end, ""),
@@ -292,13 +292,13 @@ x = [ [ 1, 2 ], [3, 4, 5] ]
     Token(:whitespace, " "),
     Token(:inline_array_begin, ""),
     Token(:single_bracket_left, "["),
-    Token(:integer, "3"),
+    Token(:decimal, "3"),
     Token(:comma, ","),
     Token(:whitespace, " "),
-    Token(:integer, "4"),
+    Token(:decimal, "4"),
     Token(:comma, ","),
     Token(:whitespace, " "),
-    Token(:integer, "5"),
+    Token(:decimal, "5"),
     Token(:single_bracket_right, "]"),
     Token(:inline_array_end, ""),
     Token(:whitespace, " "),
@@ -317,7 +317,7 @@ tokens = alltokens("x=[{foo=10}]")
  TOML.Token(:curly_brace_left, "{"),
  TOML.Token(:bare_key, "foo"),
  TOML.Token(:equal, "="),
- TOML.Token(:integer, "10"),
+ TOML.Token(:decimal, "10"),
  TOML.Token(:curly_brace_right, "}"),
  TOML.Token(:inline_table_end, ""),
  TOML.Token(:single_bracket_right, "]"),
@@ -339,7 +339,7 @@ foo = { hoge = 100 }
     Token(:whitespace, " "),
     Token(:equal, "="),
     Token(:whitespace, " "),
-    Token(:integer, "100"),
+    Token(:decimal, "100"),
     Token(:whitespace, " "),
     Token(:curly_brace_right, "}"),
     Token(:inline_table_end, ""),
@@ -356,7 +356,7 @@ foo={hoge=100}
  TOML.Token(:curly_brace_left, "{"),
  TOML.Token(:bare_key, "hoge"),
  TOML.Token(:equal, "="),
- TOML.Token(:integer, "100"),
+ TOML.Token(:decimal, "100"),
  TOML.Token(:curly_brace_right, "}"),
  Token(:inline_table_end, ""),
  TOML.Token(:newline, "\n"),
@@ -401,9 +401,9 @@ tokens = alltokens("x={foo=[1,2]}")
  TOML.Token(:equal, "="),
  TOML.Token(:inline_array_begin, ""),
  TOML.Token(:single_bracket_left, "["),
- TOML.Token(:integer, "1"),
+ TOML.Token(:decimal, "1"),
  TOML.Token(:comma, ","),
- TOML.Token(:integer, "2"),
+ TOML.Token(:decimal, "2"),
  TOML.Token(:single_bracket_right, "]"),
  TOML.Token(:inline_array_end, ""),
  TOML.Token(:curly_brace_right, "}"),
@@ -422,7 +422,7 @@ tokens = alltokens("x={foo=[[10]]}")
  TOML.Token(:single_bracket_left, "["),
  TOML.Token(:inline_array_begin, ""),
  TOML.Token(:single_bracket_left, "["),
- TOML.Token(:integer, "10"),
+ TOML.Token(:decimal, "10"),
  TOML.Token(:single_bracket_right, "]"),
  TOML.Token(:inline_array_end, ""),
  TOML.Token(:single_bracket_right, "]"),

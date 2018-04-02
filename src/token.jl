@@ -24,7 +24,7 @@ const TOKEN_EOF = Token(:eof, "")
 istext(token::Token) = !isempty(token.text)
 isevent(token::Token) = !istext(token)
 isstring(token::Token) = token.kind ∈ (:basic_string, :multiline_basic_string, :literal_string, :multiline_literal_string)
-isinteger(token::Token) = token.kind == :integer || token.kind == :binary || token.kind == :octal || token.kind == :hexadecimal
+isinteger(token::Token) = token.kind == :decimal || token.kind == :binary || token.kind == :octal || token.kind == :hexadecimal
 isfloat(token::Token) = token.kind == :float
 isboolean(token::Token) = token.kind == :boolean
 isdatetime(token::Token) = token.kind == :datetime || token.kind == :local_datetime || token.kind == :local_date || token.kind == :local_time
@@ -37,8 +37,8 @@ iseof(token::Token) = token.kind == :eof
 function tokendesc(token::Token)
     if isstring(token)
         return "string"
-    elseif token.kind == :integer
-        return "integer"
+    elseif token.kind == :decimal
+        return "decimal integer"
     elseif token.kind == :float
         return "floating-point number"
     elseif token.kind == :boolean
@@ -86,7 +86,7 @@ function keyname(token::Token)
 end
 
 function value(token::Token)
-    if token.kind == :integer
+    if token.kind == :decimal
         return Base.parse(Int, token.text)
     elseif token.kind == :float
         return Base.parse(Float64, token.text)

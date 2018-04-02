@@ -206,7 +206,7 @@ function scanvalue(input::IO, buffer::Buffer)
         end
         n = scanpattern(RE_INTEGER, input, buffer)
         if n ≥ 0
-            return :integer, n
+            return :decimal, n
         end
     elseif b1 == UInt8('i') || b1 == UInt('n') # inf / nan
         # float?
