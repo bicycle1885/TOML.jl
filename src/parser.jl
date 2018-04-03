@@ -327,3 +327,55 @@ function parsekeyvalue(reader::StreamReader)
         unexpectedtoken(token, reader.linenum)
     end
 end
+
+function readtoml(filename::AbstractString)
+    return open(parsetoml, filename)
+end
+
+function parsetoml(file::IO)
+    reader = StreamReader(file)
+    root = Dict{String,Any}()
+    node = root
+    preserve = false
+    stack = Tuple{Symbol,Int}[]
+    keystack = String[]
+    while (token = parsetoken(reader)).kind != :eof
+        if iskey(token)
+            if !preserve && !isempty(keystack)
+                pop!(keystack)
+            end
+            push!(keystack, keyname(token))
+        elseif token.kind == :inline_table_begin
+            preserve = true
+            push!(stack, (:inline_table, length(keystack) - 1))
+        elseif token.kind == :inline_table_end
+            preserve = false
+            top, nkeys = pop!(stack)
+            @assert top == :inline_table
+            @assert length(keystack) ≥ nkeys
+            resize!(keystack, nkeys)
+        elseif token.kind == :comma
+            preserve = false
+        elseif token.kind == :table_begin
+            empty!(keystack)
+            while (token = parsetoken(reader)).kind != :table_end
+                if iskey(token)
+                    push!(keystack, keyname(token))
+                end
+            end
+            preserve = true
+        elseif token.kind == :array_begin
+            empty!(keystack)
+            while (token = parsetoken(reader)).kind != :array_end
+                if iskey(token)
+                    push!(keystack, keyname(token))
+                end
+            end
+            preserve = true
+        else
+            # ignore
+        end
+        @show keystack
+    end
+    return root
+end

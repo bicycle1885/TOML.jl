@@ -30,6 +30,7 @@ isboolean(token::Token) = token.kind == :boolean
 isdatetime(token::Token) = token.kind == :datetime || token.kind == :local_datetime || token.kind == :local_date || token.kind == :local_time
 isatomicvalue(token::Token) = isstring(token) || isinteger(token) || isfloat(token) || isboolean(token) || isdatetime(token)
 iscontainer(token::Token) = token.kind ∈ (:single_bracket_left, :curly_brace_left)
+#iscontainer(token::Token) = token.kind ∈ (:inline_table_begin , :inline_array_begin)
 iskey(token::Token) = token.kind == :bare_key || token.kind == :quoted_key
 iseof(token::Token) = token.kind == :eof
 
