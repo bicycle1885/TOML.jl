@@ -332,87 +332,49 @@ function parsekeyvalue(reader::StreamReader)
     end
 end
 
-function readtoml(filename::AbstractString)
-    return open(parsetoml, filename)
-end
-
-function parsetoml(file::IO)
-    root = Dict{String,Any}()
-    # stack to keep track of nested structure (:table, :array, :inline_table, or :inline_array)
-    stack = Symbol[]
-    top() = isempty(stack) ? :none : stack[end]
-    # path to a value
-    path = Union{String,Int}[]
-    reader = StreamReader(file)
+function parse(str::AbstractString)
+    table() = Dict{String,Any}()
+    array() = []
+    root = table()
+    reader = StreamReader(IOBuffer(str))
+    key = nothing
+    node = root
     while (token = parsetoken(reader)).kind != :eof
         if iskey(token)
-            push!(path, keyname(token))
+            key = keyname(token)
         elseif isatomicvalue(token)
-            @show path token
+            @assert !haskey(node, key)  # TODO: must be checked by the stream reader
+            node[key] = value(token)
+        elseif token.kind == :table_begin  # [foo.bar]
             node = root
-            for i in 1:length(path)-1
-                if path[i] isa String
-                    node = get!(node, path[i], Dict{String,Any}())
-                else
-                    @assert path[i] isa Int
-                    node = node[path[i]]
-                end
-            end
-            node[path[end]] = token
-            pop!(path)
-        elseif token.kind == :table_begin  # [foo.bar.baz]
-            empty!(stack)
-            push!(stack, :table)
-            empty!(path)
             while (token = parsetoken(reader)).kind != :table_end
                 if iskey(token)
-                    push!(path, keyname(token))
+                    node = get!(node, keyname(token), table())
+                    if node isa Array
+                        node = node[end]
+                    end
                 end
             end
-            inittable!(root, path)
-        elseif token.kind == :array_begin  # [[foo.bar.baz]]
-            empty!(stack)
-            push!(stack, :array)
-            tmppath = String[]
+            key = nothing
+        elseif token.kind == :array_begin  # [[foo.bar]]
+            node = root
+            keys = String[]
             while (token = parsetoken(reader)).kind != :array_end
                 if iskey(token)
-                    push!(tmppath, keyname(token))
+                    push!(keys, keyname(token))
                 end
             end
-            @show tmppath path
-            if tmppath == path[1:end-1]
-                path[end] += 1
-            else
-                empty!(path)
-                append!(path, tmppath)
-                push!(path, 1)
+            for i in 1:length(keys)-1
+                node = get!(node, keys[i], table())
+                if node isa Array
+                    node = node[end]
+                end
             end
-            initarray!(root, path)
-        #elseif token.kind == :inline_table_begin
-        #elseif token.kind == :inline_table_end
+            node = push!(get!(node, keys[end], array()), table())[end]
+            key = nothing
         else
             # ignore
         end
     end
     return root
-end
-
-function inittable!(node, path)
-    @assert length(path) ≥ 1
-    for i in 1:length(path)
-        node = get!(node, path[i], Dict{String,Any}())
-    end
-    return node
-end
-
-function initarray!(node, path)
-    @assert length(path) ≥ 2
-    @assert path[end] isa Int
-    for i in 1:length(path)-2
-        node = get!(node, path[i], Dict{String,Any}())
-    end
-    node = get!(node, path[end-1], [])
-    #@assert length(node) == path[end] - 1
-    push!(node, Dict{String,Any}())
-    return node
 end
