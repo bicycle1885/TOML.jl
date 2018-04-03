@@ -14,6 +14,8 @@ using Test
 @test TOML.keyname(Token(:quoted_key, "\"foo キー\"")) === "foo キー"
 @test TOML.keyname(Token(:quoted_key, "'foo キー'")) === "foo キー"
 
+@test_throws ArgumentError("not a key token") TOML.keyname(Token(:decimal, "1234"))
+
 # decimal
 @test TOML.value(Token(:decimal, "1234567890")) === 1234567890
 @test TOML.value(Token(:decimal, "-1234")) === -1234
@@ -97,7 +99,7 @@ foo\\
      bar
 '''")) === "foo\\\n\n     bar\n"
 
-@test_throws ArgumentError TOML.value(Token(:bare_key, "foo"))
+@test_throws ArgumentError("not a value token") TOML.value(Token(:bare_key, "foo"))
 
 @test TOML.scanvalue(IOBuffer("\"foo\""), TOML.Buffer()) == (:basic_string, 5)
 @test TOML.scanvalue(IOBuffer("'foo'"), TOML.Buffer()) == (:literal_string, 5)
