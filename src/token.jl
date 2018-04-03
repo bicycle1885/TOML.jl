@@ -106,8 +106,11 @@ function value(token::Token)
         return Base.parse(Float64, token.text)
     elseif token.kind == :boolean
         return token.text[1] == 't' ? true : false
+    elseif token.kind == :basic_string
+        # TODO: support unicode escaping (\UXXXXXXXX)
+        return unescape_string(chop(token.text, head=1, tail=1))
     elseif token.kind == :literal_string
-        return token.text[2:end-1]
+        return String(chop(token.text, head=1, tail=1))
     elseif token.kind == :multiline_literal_string
         return token.text[4:end-3]
     # FIXME: datetime, strings,

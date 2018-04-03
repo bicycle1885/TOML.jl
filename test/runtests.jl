@@ -30,6 +30,18 @@ using Test
 @test TOML.value(Token(:boolean, "true"))  === true
 @test TOML.value(Token(:boolean, "false")) === false
 
+# basic string
+@test TOML.value(Token(:basic_string, "\"\"")) === ""
+@test TOML.value(Token(:basic_string, "\"foobar\"")) === "foobar"
+@test TOML.value(Token(:basic_string, "\"αβγあいう\"")) === "αβγあいう"
+@test TOML.value(Token(:basic_string, "\"escaping: \\\" \\b \\t \\n \\f \\r \\\" \\\\ \"")) === "escaping: \" \b \t \n \f \r \" \\ "
+@test TOML.value(Token(:basic_string, "\"unicode: \\u3042\"")) === "unicode: あ"
+
+# literal string
+@test TOML.value(Token(:literal_string, "''")) === ""
+@test TOML.value(Token(:literal_string, "'αβγあいう'")) === "αβγあいう"
+@test TOML.value(Token(:literal_string, "'C:\\Users\\Windows\\Path'")) === raw"C:\Users\Windows\Path"
+
 @test TOML.scanvalue(IOBuffer("\"foo\""), TOML.Buffer()) == (:basic_string, 5)
 @test TOML.scanvalue(IOBuffer("'foo'"), TOML.Buffer()) == (:literal_string, 5)
 @test TOML.scanvalue(IOBuffer("123"), TOML.Buffer()) == (:decimal, 3)
