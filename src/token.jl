@@ -109,18 +109,21 @@ function value(token::Token)
     elseif token.kind == :basic_string
         # TODO: support unicode escaping (\UXXXXXXXX)
         return unescape_string(chop(token.text, head=1, tail=1))
+    elseif token.kind == :multiline_basic_string
+        # TODO: support unicode escaping (\UXXXXXXXX)
+        return trimwhitespace(normnewlines(chop(token.text, head=3, tail=3)))
     elseif token.kind == :literal_string
         return String(chop(token.text, head=1, tail=1))
     elseif token.kind == :multiline_literal_string
-        return token.text[4:end-3]
+        return normnewlines(chop(token.text, head=3, tail=3))
     # FIXME: datetime, strings,
     else
         throw(ArgumentError("not a value token"))
     end
 end
 
-function drop(s, c)
-    return replace(s, c => "")
-end
+drop(s, c) = replace(s, c => "")
+normnewlines(s) = replace(replace(s, r"\r" => ""), r"^\n" => "")
+trimwhitespace(s) = replace(s, r"(?:^\r?\n)|(?:\\\s+)" => "")
 
 countlines(token::Token) = count(isequal('\n'), token.text)

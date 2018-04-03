@@ -42,10 +42,48 @@ using Test
 @test TOML.value(Token(:basic_string, "\"escaping: \\\" \\b \\t \\n \\f \\r \\\" \\\\ \"")) === "escaping: \" \b \t \n \f \r \" \\ "
 @test TOML.value(Token(:basic_string, "\"unicode: \\u3042\"")) === "unicode: あ"
 
+# multiline basic string
+@test TOML.value(Token(:multiline_basic_string, "\"\"\"\"\"\"")) === ""
+@test TOML.value(Token(:multiline_basic_string, "\"\"\"foobar\"\"\"")) === "foobar"
+@test TOML.value(Token(:multiline_basic_string, "\"\"\"αβγあいう\"\"\"")) === "αβγあいう"
+@test TOML.value(Token(:multiline_basic_string,
+"""\"\"\"
+multi
+-line
+文章
+\"\"\"""")) === "multi\n-line\n文章\n"
+@test TOML.value(Token(:multiline_basic_string,
+"""\"\"\"
+line 1\r
+line 2\r
+\"\"\"""")) === "line 1\nline 2\n"
+@test TOML.value(Token(:multiline_basic_string,
+"""\"\"\"
+foo\\
+
+     bar
+\"\"\"""")) === "foobar\n"
+
 # literal string
 @test TOML.value(Token(:literal_string, "''")) === ""
 @test TOML.value(Token(:literal_string, "'αβγあいう'")) === "αβγあいう"
 @test TOML.value(Token(:literal_string, "'C:\\Users\\Windows\\Path'")) === raw"C:\Users\Windows\Path"
+
+# multiline literal string
+@test TOML.value(Token(:multiline_literal_string, "''''''")) === ""
+@test TOML.value(Token(:multiline_literal_string, "'''αβγあいう'''")) === "αβγあいう"
+@test TOML.value(Token(:multiline_literal_string, "'''C:\\Users\\Windows\\Path'''")) === raw"C:\Users\Windows\Path"
+@test TOML.value(Token(:multiline_literal_string,
+"'''
+line 1\r
+line 2\r
+'''")) === "line 1\nline 2\n"
+@test TOML.value(Token(:multiline_literal_string,
+"'''
+foo\\
+
+     bar
+'''")) === "foo\\\n\n     bar\n"
 
 @test TOML.scanvalue(IOBuffer("\"foo\""), TOML.Buffer()) == (:basic_string, 5)
 @test TOML.scanvalue(IOBuffer("'foo'"), TOML.Buffer()) == (:literal_string, 5)
