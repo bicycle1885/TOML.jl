@@ -55,7 +55,6 @@ function readtoken(reader::StreamReader)
                 return Token(:newline, "\n")
             end
         elseif char == '#'  # comment
-            #n = scanwhile(c -> (@show c; c != '\r' && c != '\n'), input, buffer)
             n = scanwhile(c -> c != '\r' && c != '\n', input, buffer)
             return Token(:comment, taketext!(buffer, n))
         elseif reader.expectvalue
