@@ -85,8 +85,11 @@ function keyname(token::Token)
     if token.kind == :bare_key
         return token.text
     elseif token.kind == :quoted_key
-        # FIXME
-        return token.text[2:end-1]
+        if token.text[1] == '"'
+            return unwrap_basic_string(token.text)
+        else
+            return unwrap_literal_string(token.text)
+        end
     else
         throw(ArgumentError("not a key token"))
     end
@@ -107,19 +110,27 @@ function value(token::Token)
     elseif token.kind == :boolean
         return token.text[1] == 't' ? true : false
     elseif token.kind == :basic_string
-        # TODO: support unicode escaping (\UXXXXXXXX)
-        return unescape_string(chop(token.text, head=1, tail=1))
+        return unwrap_basic_string(token.text)
     elseif token.kind == :multiline_basic_string
         # TODO: support unicode escaping (\UXXXXXXXX)
         return trimwhitespace(normnewlines(chop(token.text, head=3, tail=3)))
     elseif token.kind == :literal_string
-        return String(chop(token.text, head=1, tail=1))
+        return unwrap_literal_string(token.text)
     elseif token.kind == :multiline_literal_string
         return normnewlines(chop(token.text, head=3, tail=3))
-    # FIXME: datetime, strings,
+    # FIXME: datetime
     else
         throw(ArgumentError("not a value token"))
     end
+end
+
+function unwrap_basic_string(s::String)
+    # TODO: support unicode escaping (\UXXXXXXXX)
+    return unescape_string(chop(s, head=1, tail=1))
+end
+
+function unwrap_literal_string(s::String)
+    return String(chop(s, head=1, tail=1))
 end
 
 drop(s, c) = replace(s, c => "")

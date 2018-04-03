@@ -2,6 +2,18 @@ using TOML: Token
 import TOML
 using Test
 
+# bare key
+@test TOML.keyname(Token(:bare_key, "foo")) === "foo"
+@test TOML.keyname(Token(:bare_key, "foo-bar")) === "foo-bar"
+
+# quoted key
+@test TOML.keyname(Token(:quoted_key, "\"foo\"")) === "foo"
+@test TOML.keyname(Token(:quoted_key, "'foo'")) === "foo"
+@test TOML.keyname(Token(:quoted_key, "\"\"")) === ""
+@test TOML.keyname(Token(:quoted_key, "''")) === ""
+@test TOML.keyname(Token(:quoted_key, "\"foo キー\"")) === "foo キー"
+@test TOML.keyname(Token(:quoted_key, "'foo キー'")) === "foo キー"
+
 # decimal
 @test TOML.value(Token(:decimal, "1234567890")) === 1234567890
 @test TOML.value(Token(:decimal, "-1234")) === -1234
@@ -84,6 +96,8 @@ foo\\
 
      bar
 '''")) === "foo\\\n\n     bar\n"
+
+@test_throws ArgumentError TOML.value(Token(:bare_key, "foo"))
 
 @test TOML.scanvalue(IOBuffer("\"foo\""), TOML.Buffer()) == (:basic_string, 5)
 @test TOML.scanvalue(IOBuffer("'foo'"), TOML.Buffer()) == (:literal_string, 5)
