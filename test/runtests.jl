@@ -644,7 +644,8 @@ data = TOML.parse("foo = 100")
 data = TOML.parse("foo = 100\nbar = 1.23")
 @test data == Dict("foo" => 100, "bar" => 1.23)
 
-data = TOML.parse("""
+data = TOML.parse(
+"""
 key1 = 0
 
 [foo]
@@ -662,3 +663,59 @@ qux = 100
     "key1" => 0,
     "foo" => Dict("key1" => 1, "key2" => 2, "bar" => Dict("baz" => Dict("qux" => 100))),
     "bar" => Dict("key1" => 10, "key2" => 20))
+
+data = TOML.parse(
+"""
+[[foo]]
+x = 1
+y = 2
+
+[[foo]]
+
+[[foo]]
+x = 10
+y = 20
+z = 30
+
+[[bar.baz]]
+qux = 100
+""")
+@test data == Dict(
+    "foo" => [
+        Dict("x" => 1, "y" => 2),
+        Dict(),
+        Dict("x" => 10, "y" => 20, "z" => 30),
+    ],
+    "bar" => Dict("baz" => [Dict("qux" => 100)]))
+
+data = TOML.parse(
+"""
+[[fruit]]
+  name = "apple"
+
+  [fruit.physical]
+    color = "red"
+    shape = "round"
+
+  [[fruit.variety]]
+    name = "red delicious"
+
+  [[fruit.variety]]
+    name = "granny smith"
+
+[[fruit]]
+  name = "banana"
+
+  [[fruit.variety]]
+    name = "plantain"
+""")
+@test data == Dict(
+    "fruit" => [
+        Dict(
+            "name" => "apple",
+            "physical" => Dict("color" => "red", "shape" => "round"),
+            "variety" => [Dict("name" => "red delicious"), Dict("name" => "granny smith")]),
+        Dict(
+             "name" => "banana",
+             "variety" => [Dict("name" => "plantain")])
+    ])
