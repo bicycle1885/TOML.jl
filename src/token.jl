@@ -92,9 +92,16 @@ function keyname(token::Token)
     end
 end
 
+# Get the value.
 function value(token::Token)
     if token.kind == :decimal
         return Base.parse(Int, token.text)
+    elseif token.kind == :binary
+        return Base.parse(UInt, token.text[3:end], base=2)
+    elseif token.kind == :octal
+        return Base.parse(UInt, token.text[3:end], base=8)
+    elseif token.kind == :hexadecimal
+        return Base.parse(UInt, token.text[3:end], base=16)
     elseif token.kind == :float
         return Base.parse(Float64, token.text)
     elseif token.kind == :boolean

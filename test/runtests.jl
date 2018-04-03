@@ -2,6 +2,34 @@ using TOML: Token
 import TOML
 using Test
 
+# decimal
+@test TOML.value(Token(:decimal, "1234567890")) === 1234567890
+@test TOML.value(Token(:decimal, "-1234")) === -1234
+
+# binary
+@test TOML.value(Token(:binary, "0b01")) === UInt(0b01)
+
+# octal
+@test TOML.value(Token(:octal, "0o01234567")) === UInt(0o01234567)
+
+# hexadecimal
+@test TOML.value(Token(:hexadecimal, "0x0123456789ABCDEF")) === UInt(0x0123456789ABCDEF)
+@test TOML.value(Token(:hexadecimal, "0x0123456789abcdef")) === UInt(0x0123456789abcdef)
+
+# float
+@test TOML.value(Token(:float, "1.23")) === 1.23
+@test TOML.value(Token(:float, "1e-2")) === 1e-2
+@test TOML.value(Token(:float, "inf"))  === Inf
+@test TOML.value(Token(:float, "-inf")) === -Inf
+@test TOML.value(Token(:float, "+inf")) === Inf
+@test TOML.value(Token(:float, "nan"))  === NaN
+@test TOML.value(Token(:float, "-nan")) === -NaN
+@test TOML.value(Token(:float, "+nan")) === NaN
+
+# boolean
+@test TOML.value(Token(:boolean, "true"))  === true
+@test TOML.value(Token(:boolean, "false")) === false
+
 @test TOML.scanvalue(IOBuffer("\"foo\""), TOML.Buffer()) == (:basic_string, 5)
 @test TOML.scanvalue(IOBuffer("'foo'"), TOML.Buffer()) == (:literal_string, 5)
 @test TOML.scanvalue(IOBuffer("123"), TOML.Buffer()) == (:decimal, 3)
@@ -537,35 +565,22 @@ srand(1234)
 end)
 
 data = TOML.parse("")
-@test data isa Dict
-@test isempty(data)
+@test data == Dict()
 
 data = TOML.parse("foo = 100")
-@test data isa Dict
-@test data["foo"] == 100
+@test data == Dict("foo" => 100)
 
-data = TOML.parse("foo = 3.14\nhoge = 'ga'\n")
-@test data isa Dict
-@test data["foo"] == 3.14
-@test data["hoge"] == "ga"
+data = TOML.parse("foo = 100\nbar = 1.23")
+@test data == Dict("foo" => 100, "bar" => 1.23)
 
-data = TOML.parse("foo = []")
-@test isempty(data["foo"])
+#=
+data = TOML.parse(
+"""
+name = "hi"
 
-data = TOML.parse("foo = [1, 2]")
-@test data["foo"] == [1, 2]
-
-data = TOML.parse("foo = {hoge = 1.23, piyo = 'abc'}")
-@test data["foo"] isa Dict
-@test data["foo"]["hoge"] == 1.23
-@test data["foo"]["piyo"] == "abc"
-
-data = TOML.parse("""
-name = 'aaa'
-[daba]
-nana = 123
-me=2.1
+[foo]
+bar = 1234
+baz = 'aaa'
 """)
-@test data["name"] == "aaa"
-@test data["daba"]["nana"] == 123
-@test data["daba"]["me"] == 2.1
+@show data
+=#
