@@ -5,16 +5,20 @@ using Test
 # decimal
 @test TOML.value(Token(:decimal, "1234567890")) === 1234567890
 @test TOML.value(Token(:decimal, "-1234")) === -1234
+@test TOML.value(Token(:decimal, "-1_23_4")) === -1234
 
 # binary
 @test TOML.value(Token(:binary, "0b01")) === UInt(0b01)
+@test TOML.value(Token(:binary, "0b0_1")) === UInt(0b01)
 
 # octal
 @test TOML.value(Token(:octal, "0o01234567")) === UInt(0o01234567)
+@test TOML.value(Token(:octal, "0o0123_45_67")) === UInt(0o01234567)
 
 # hexadecimal
 @test TOML.value(Token(:hexadecimal, "0x0123456789ABCDEF")) === UInt(0x0123456789ABCDEF)
 @test TOML.value(Token(:hexadecimal, "0x0123456789abcdef")) === UInt(0x0123456789abcdef)
+@test TOML.value(Token(:hexadecimal, "0x0123_456789ab_cdef")) === UInt(0x0123456789abcdef)
 
 # float
 @test TOML.value(Token(:float, "1.23")) === 1.23
@@ -25,6 +29,7 @@ using Test
 @test TOML.value(Token(:float, "nan"))  === NaN
 @test TOML.value(Token(:float, "-nan")) === -NaN
 @test TOML.value(Token(:float, "+nan")) === NaN
+@test TOML.value(Token(:float, "9_224_617.445_991_228_313")) === 9224617.445991228313
 
 # boolean
 @test TOML.value(Token(:boolean, "true"))  === true

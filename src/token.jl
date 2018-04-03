@@ -95,15 +95,15 @@ end
 # Get the value.
 function value(token::Token)
     if token.kind == :decimal
-        return Base.parse(Int, token.text)
+        return Base.parse(Int, drop(token.text, '_'))
     elseif token.kind == :binary
-        return Base.parse(UInt, token.text[3:end], base=2)
+        return Base.parse(UInt, drop(token.text[3:end], '_'), base=2)
     elseif token.kind == :octal
-        return Base.parse(UInt, token.text[3:end], base=8)
+        return Base.parse(UInt, drop(token.text[3:end], '_'), base=8)
     elseif token.kind == :hexadecimal
-        return Base.parse(UInt, token.text[3:end], base=16)
+        return Base.parse(UInt, drop(token.text[3:end], '_'), base=16)
     elseif token.kind == :float
-        return Base.parse(Float64, token.text)
+        return Base.parse(Float64, drop(token.text, '_'))
     elseif token.kind == :boolean
         return token.text[1] == 't' ? true : false
     elseif token.kind == :basic_string
@@ -117,6 +117,10 @@ function value(token::Token)
     else
         throw(ArgumentError("not a value token"))
     end
+end
+
+function drop(s, c)
+    return replace(s, c => "")
 end
 
 countlines(token::Token) = count(isequal('\n'), token.text)
