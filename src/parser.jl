@@ -77,7 +77,12 @@ function readtoken(reader::StreamReader)
                 parse_error("unexpected end of file", reader.linenum)
             end
             reader.expectvalue = false
-            return Token(kind, taketext!(buffer, n))
+            token = Token(kind, taketext!(buffer, n))
+            if token.kind ∈ (:multiline_basic_string, :multiline_literal_string)
+                # multiline strings may contain newlines
+                reader.linenum += countlines(token)
+            end
+            return token
         elseif char == '='
             consume!(buffer, 1)
             reader.expectvalue = true

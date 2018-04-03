@@ -108,3 +108,5 @@ function value(token::Token)
         throw(ArgumentError("not a value token"))
     end
 end
+
+countlines(token::Token) = count(isequal('\n'), token.text)

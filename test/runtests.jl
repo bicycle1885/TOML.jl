@@ -513,6 +513,20 @@ tokens = alltokens("""
 @test_throws TOML.ParseError("unexpected '=' at line 1") alltokens("x={10.=10}")
 @test_throws TOML.ParseError("unexpected newline at line 1") alltokens("x={\nfoo=100}")
 @test_throws TOML.ParseError("line feed (LF) is expected after carriage return (CR) at line 1") alltokens("foo=100\r")
+@test_throws TOML.ParseError("unexpected newline at line 11") alltokens(
+"""
+foo = '''
+some
+text
+'''
+
+bar = \"\"\"
+some
+text
+\"\"\"
+
+error =
+""")
 
 using Random
 randutf8(n) = String(rand(['α', 'あ', '𐍈'], n))
