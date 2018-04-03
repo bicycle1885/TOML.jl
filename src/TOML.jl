@@ -28,19 +28,25 @@ function debug(str::AbstractString)
 end
 
 function parse(str::AbstractString)
-    root = Dict{String,Any}()
+    table() = Dict{String,Any}()
+    root = table()
     reader = StreamReader(IOBuffer(str))
-    path = String[]
+    key = ""
+    node = root
     while (token = parsetoken(reader)).kind != :eof
         if iskey(token)
-            push!(path, keyname(token))
+            key = keyname(token)
+            node[key] = table()
         elseif isatomicvalue(token)
+            node[key] = value(token)
+        elseif token.kind == :table_begin
             node = root
-            for i in 1:length(path)-1
-                node = get!(node, path[i], Dict{String,Any}())
+            while (token = parsetoken(reader)).kind != :table_end
+                if iskey(token)
+                    key = keyname(token)
+                    node = get!(node, key, table())
+                end
             end
-            node[path[end]] = value(token)
-            pop!(path)
         else
             # ignore
         end

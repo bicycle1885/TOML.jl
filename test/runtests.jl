@@ -644,14 +644,21 @@ data = TOML.parse("foo = 100")
 data = TOML.parse("foo = 100\nbar = 1.23")
 @test data == Dict("foo" => 100, "bar" => 1.23)
 
-#=
-data = TOML.parse(
-"""
-name = "hi"
+data = TOML.parse("""
+key1 = 0
 
 [foo]
-bar = 1234
-baz = 'aaa'
+key1 = 1
+key2 = 2
+
+[bar]
+key1 = 10
+key2 = 20
+
+[foo.bar.baz]
+qux = 100
 """)
-@show data
-=#
+@test data == Dict(
+    "key1" => 0,
+    "foo" => Dict("key1" => 1, "key2" => 2, "bar" => Dict("baz" => Dict("qux" => 100))),
+    "bar" => Dict("key1" => 10, "key2" => 20))
