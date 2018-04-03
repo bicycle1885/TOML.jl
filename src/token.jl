@@ -124,17 +124,13 @@ function value(token::Token)
     end
 end
 
+# utilities
 function unwrap_basic_string(s::String)
     # TODO: support unicode escaping (\UXXXXXXXX)
     return unescape_string(chop(s, head=1, tail=1))
 end
-
-function unwrap_literal_string(s::String)
-    return String(chop(s, head=1, tail=1))
-end
-
+unwrap_literal_string(s::String) = String(chop(s, head=1, tail=1))
 drop(s, c) = replace(s, c => "")
 normnewlines(s) = replace(replace(s, r"\r" => ""), r"^\n" => "")
 trimwhitespace(s) = replace(s, r"(?:^\r?\n)|(?:\\\s+)" => "")
-
 countlines(token::Token) = count(isequal('\n'), token.text)
