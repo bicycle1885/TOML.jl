@@ -87,7 +87,7 @@ function readtoken(reader::StreamReader)
             reader.expectvalue = true
             return Token(:equal, "=")
         elseif iskeychar(char)  # bare key
-            n = scanwhile(iskeychar, input, buffer)
+            n = scanbarekey(input, buffer)
             return Token(:bare_key, taketext!(buffer, n))
         elseif char == '"' || char == '\''  # quoted key
             n = scanpattern(char == '"' ? RE_BASIC_STRING : RE_LITERAL_STRING, input, buffer)
