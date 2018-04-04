@@ -339,11 +339,12 @@ function parsekeyvalue(reader::StreamReader)
 end
 
 parse(str::AbstractString) = parse(IOBuffer(str))
+parsefile(filename::AbstractString) = open(parse, filename)
+
+const Table = Dict{String,Any}
 
 function parse(input::IO)
-    table() = Dict{String,Any}()
-    array() = []
-    root = table()
+    root = Table()
     reader = StreamReader(input)
     key = nothing
     node = root
@@ -373,11 +374,11 @@ function parse(input::IO)
         elseif token.kind == :inline_table_begin
             push!(stack, node)
             if node isa Array
-                push!(node, table())
+                push!(node, Table())
                 node = node[end]
             else
                 @assert !haskey(node, key)
-                node[key] = table()
+                node[key] = Table()
                 node = node[key]
             end
         elseif token.kind == :inline_table_end
@@ -386,7 +387,7 @@ function parse(input::IO)
             node = root
             while (token = parsetoken(reader)).kind != :table_end
                 if iskey(token)
-                    node = get!(node, keyname(token), table())
+                    node = get!(node, keyname(token), Table())
                     if node isa Array
                         node = node[end]
                     end
@@ -402,12 +403,12 @@ function parse(input::IO)
                 end
             end
             for i in 1:length(keys)-1
-                node = get!(node, keys[i], table())
+                node = get!(node, keys[i], Table())
                 if node isa Array
                     node = node[end]
                 end
             end
-            node = push!(get!(node, keys[end], array()), table())[end]
+            node = push!(get!(node, keys[end], []), Table())[end]
             key = nothing
         else
             # ignore
