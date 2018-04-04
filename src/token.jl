@@ -118,9 +118,20 @@ function value(token::Token)
         return unwrap_literal_string(token.text)
     elseif token.kind == :multiline_literal_string
         return normnewlines(chop(token.text, head=3, tail=3))
-    # FIXME: datetime
+    elseif token.kind == :datetime
+        date = Base.parse(Date, token.text[1:10], dateformat"y-m-d")
+        timepart = findfirst(r"\d{2}:\d{2}:\d{2}(?:\.\d+)?", token.text)
+        @assert timepart != nothing
+        if length(timepart) == 8
+            time = Base.parse(Time, token.text[timepart], dateformat"H:M:S")
+        else
+            time = Base.parse(Time, token.text[timepart], dateformat"H:M:S.s")
+        end
+        # return time offset as a string
+        offset = token.text[timepart[end]+1:end]
+        return DateTime(year(date), month(date), day(date), hour(time), minute(time), second(time), millisecond(time)), offset
     else
-        throw(ArgumentError("not a value token"))
+        throw(ArgumentError("not a value token: $(token)"))
     end
 end
 

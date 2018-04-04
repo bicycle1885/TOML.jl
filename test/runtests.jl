@@ -1,6 +1,7 @@
 using TOML: Token
 import TOML
 using Test
+using Dates
 
 # bare key
 @test TOML.keyname(Token(:bare_key, "foo")) === "foo"
@@ -99,7 +100,13 @@ foo\\
      bar
 '''")) === "foo\\\n\n     bar\n"
 
-@test_throws ArgumentError("not a value token") TOML.value(Token(:bare_key, "foo"))
+# datetime
+@test TOML.value(Token(:datetime, "1979-05-27T07:32:00Z")) == (DateTime(1979, 5, 27, 7, 32, 00), "Z")
+@test TOML.value(Token(:datetime, "1979-05-27 07:32:00Z")) == (DateTime(1979, 5, 27, 7, 32, 00), "Z")
+@test TOML.value(Token(:datetime, "1979-05-27T00:32:00-07:00")) == (DateTime(1979, 5, 27, 00, 32, 00), "-07:00")
+@test TOML.value(Token(:datetime, "1979-05-27T00:32:00.999-07:00")) == (DateTime(1979, 5, 27, 00, 32, 00, 999), "-07:00")
+
+@test_throws ArgumentError("not a value token: Token(:bare_key, \"foo\")") TOML.value(Token(:bare_key, "foo"))
 
 @test TOML.scanvalue(IOBuffer("\"foo\""), TOML.Buffer()) == (:basic_string, 5)
 @test TOML.scanvalue(IOBuffer("'foo'"), TOML.Buffer()) == (:literal_string, 5)
