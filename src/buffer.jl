@@ -111,9 +111,29 @@ function scanwhile(f::Function, input::IO, buffer::Buffer; offset::Int=0)
     return o - offset
 end
 
+# Specialized function for scanning whitespace.
+# Equivalent to `scanwhile(iswhitespace, input, buffer)`.
+function scanwhitespace(input::IO, buffer::Buffer)
+    # space or tab
+    iswhitespace(b) = (b == 0x20) | (b == 0x09)
+    n = 0
+    @label scan
+    while buffer.p + n ≤ buffer.p_end
+        if !iswhitespace(buffer.data[buffer.p+n])
+            break
+        end
+        n += 1
+    end
+    if buffer.p + n > buffer.p_end && buffer.p_eof < 0 && fillbuffer!(input, buffer) > 0
+        @goto scan
+    end
+    return n
+end
+
 # Specialized function for scanning bare keys.
 # Equivalent to `scanwhile(iskeychar, input, buffer)`.
 function scanbarekey(input::IO, buffer::Buffer)
+    # [0-9A-Za-z-_]
     isbarekey(b) = (b == 0x2d) | (0x30 ≤ b ≤ 0x39) | (0x41 ≤ b ≤ 0x5a) | (b == 0x5f) | (0x61 ≤ b ≤ 0x7a)
     n = 0
     @label scan

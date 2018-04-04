@@ -38,7 +38,7 @@ function readtoken(reader::StreamReader)
     while (char_n = peekchar(input, buffer)) != nothing
         char, n = char_n
         if iswhitespace(char)  # space or tab
-            n = scanwhile(iswhitespace, input, buffer)
+            n = scanwhitespace(input, buffer)
             return Token(:whitespace, taketext!(buffer, n))
         elseif char ∈ ('\r', '\n')  # newline
             consume!(buffer, 1)
