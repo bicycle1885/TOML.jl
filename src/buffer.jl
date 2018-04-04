@@ -2,10 +2,15 @@
 # ======
 
 mutable struct Buffer
+    # UTF-8 encoded sequence + 0-3 incomplete bytes
     data::Vector{UInt8}
+    # the current reading position (the first byte of the UTF-8 sequence)
     p::Int
+    # the end position of the UTF-8 sequence
     p_end::Int
+    # the end position of the filled bytes
     p_fill::Int
+    # the end position of the stream (-1 if yet found)
     p_eof::Int
 
     function Buffer()
@@ -19,6 +24,7 @@ function fillbuffer!(input::IO, buffer::Buffer)
         return 0
     end
     if (len = buffer.p_fill - buffer.p + 1) > 0
+        # move data
         copyto!(buffer.data, 1, buffer.data, buffer.p, len)
         buffer.p_fill -= buffer.p - 1
         buffer.p = 1
@@ -32,15 +38,17 @@ function fillbuffer!(input::IO, buffer::Buffer)
         n = length(buffer.data) - buffer.p_fill
     end
     if eof(input)
-        n = 0
+        # found EOF
         buffer.p_end = buffer.p_eof = buffer.p_fill
-        return n
+        return 0
     else
+        # read data into the buffer
         n = min(n, bytesavailable(input))
         unsafe_read(input, pointer(buffer.data, buffer.p_fill + 1), n)
         buffer.p_fill += n
     end
     # align UTF-8 boundary
+    p_new = buffer.p_end + 1
     buffer.p_end = buffer.p_fill
     if buffer.data[buffer.p_end] ≤ 0b01111111
         # ascii
@@ -54,7 +62,15 @@ function fillbuffer!(input::IO, buffer::Buffer)
             buffer.p_end -= 1
         end
     end
+    # validate UTF-8 encoding
+    if buffer.p_end > p_new && !is_valid_utf8(buffer.data, p_new, buffer.p_end)
+        throw(ErrorException("invalid UTF-8 sequence"))
+    end
     return n
+end
+
+function is_valid_utf8(data::Vector{UInt8}, from::Int, to::Int)
+    return ccall(:u8_isvalid, Cint, (Ptr{UInt8}, Csize_t), pointer(data, from), to - from + 1) > 0
 end
 
 function ensurebytes!(input::IO, buffer::Buffer, n::Int)
@@ -67,15 +83,9 @@ function ensurebytes!(input::IO, buffer::Buffer, n::Int)
 end
 
 function peekchar(input::IO, buffer::Buffer; offset::Int=0)
-    # TODO: encoding check
-    if buffer.p + offset > buffer.p_end
-        fillbuffer!(input, buffer)
-    end
     ensurebytes!(input, buffer, offset+4)
-    #@show buffer.p, buffer.p_end, offset
-    p = buffer.p + offset
-    if p ≤ buffer.p_end
-        b = buffer.data[p]
+    if buffer.p + offset ≤ buffer.p_end
+        b = buffer.data[buffer.p+offset]
         u = UInt32(b) << 24
         if b < 0b10000000
             return reinterpret(Char, u), 1
@@ -93,10 +103,9 @@ function peekchar(input::IO, buffer::Buffer; offset::Int=0)
             return reinterpret(Char, u), 4
         end
     else
+        # no more character
         return '\0', 0
     end
-    @label utf8error
-    parse_error("invalid UTF8 sequence")
 end
 
 function scanwhile(f::Function, input::IO, buffer::Buffer; offset::Int=0)
