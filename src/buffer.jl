@@ -93,7 +93,7 @@ function peekchar(input::IO, buffer::Buffer; offset::Int=0)
             return reinterpret(Char, u), 4
         end
     else
-        return nothing
+        return '\0', 0
     end
     @label utf8error
     parse_error("invalid UTF8 sequence")
@@ -101,7 +101,7 @@ end
 
 function scanwhile(f::Function, input::IO, buffer::Buffer; offset::Int=0)
     o = offset
-    while (char_n = peekchar(input, buffer, offset=o)) != nothing
+    while (char_n = peekchar(input, buffer, offset=o))[2] > 0
         char, n = char_n
         if !f(char)
             break

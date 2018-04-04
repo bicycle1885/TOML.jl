@@ -35,7 +35,7 @@ function readtoken(reader::StreamReader)
     buffer = reader.buffer
     stack = reader.stack
     queue = reader.queue
-    while (char_n = peekchar(input, buffer)) != nothing
+    while (char_n = peekchar(input, buffer))[2] > 0
         char, n = char_n
         if iswhitespace(char)  # space or tab
             n = scanwhitespace(input, buffer)
