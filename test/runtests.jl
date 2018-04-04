@@ -490,6 +490,37 @@ name = { first = "Tom", last = "Preston-Werner" }
      TOML.Token(:newline, "\n"),
 ]
 
+tokens = alltokens("x={foo={x=10}, bar={y=20},}")
+@test tokens == [
+ TOML.Token(:bare_key, "x"),
+ TOML.Token(:equal, "="),
+ TOML.Token(:inline_table_begin, ""),
+ TOML.Token(:curly_brace_left, "{"),
+ TOML.Token(:bare_key, "foo"),
+ TOML.Token(:equal, "="),
+ TOML.Token(:inline_table_begin, ""),
+ TOML.Token(:curly_brace_left, "{"),
+ TOML.Token(:bare_key, "x"),
+ TOML.Token(:equal, "="),
+ TOML.Token(:decimal, "10"),
+ TOML.Token(:curly_brace_right, "}"),
+ TOML.Token(:inline_table_end, ""),
+ TOML.Token(:comma, ","),
+ TOML.Token(:whitespace, " "),
+ TOML.Token(:bare_key, "bar"),
+ TOML.Token(:equal, "="),
+ TOML.Token(:inline_table_begin, ""),
+ TOML.Token(:curly_brace_left, "{"),
+ TOML.Token(:bare_key, "y"),
+ TOML.Token(:equal, "="),
+ TOML.Token(:decimal, "20"),
+ TOML.Token(:curly_brace_right, "}"),
+ TOML.Token(:inline_table_end, ""),
+ TOML.Token(:comma, ","),
+ TOML.Token(:curly_brace_right, "}"),
+ TOML.Token(:inline_table_end, ""),
+]
+
 tokens = alltokens("x={foo=[1,2]}")
 @test tokens == [
  TOML.Token(:bare_key, "x"),
@@ -649,6 +680,12 @@ data = TOML.parse("x = [1]\ny = [1,2,3]\nz = []")
 
 data = TOML.parse("x = [[1,2,3], [1,2]]\ny = [[1,2]]\nz = [[[]]]")
 @test data == Dict("x" => [[1,2,3], [1,2]], "y" => [[1,2]], "z" => [[[]]])
+
+data = TOML.parse("name = { first = \"Tom\", last = \"Preston-Werner\" }")
+@test data == Dict("name" => Dict("first" => "Tom", "last" => "Preston-Werner"))
+
+data = TOML.parse("x = {foo = 10, bar = { a = 1, b = 2 }, baz = {}}")
+@test data == Dict("x" => Dict("foo" => 10, "bar" => Dict("a" => 1, "b" => 2), "baz" => Dict()))
 
 data = TOML.parse(
 """

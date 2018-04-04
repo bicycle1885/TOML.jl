@@ -203,6 +203,12 @@ function parsetoken(reader::StreamReader)
             readtoken(reader)
             pop!(stack)
             accept(TOKEN_INLINE_TABLE_END)
+            while peektoken(reader).kind == :whitespace
+                accept(readtoken(reader))
+            end
+            if peektoken(reader).kind == :comma
+                accept(readtoken(reader))
+            end
             return token
         elseif token.kind ∈ (:bare_key, :quoted_key)
             parsekeyvalue(reader)
@@ -361,6 +367,18 @@ function parse(str::AbstractString)
                 node = node[key]
             end
         elseif token.kind == :inline_array_end
+            node = pop!(stack)
+        elseif token.kind == :inline_table_begin
+            push!(stack, node)
+            if node isa Array
+                push!(node, table())
+                node = node[end]
+            else
+                @assert !haskey(node, key)
+                node[key] = table()
+                node = node[key]
+            end
+        elseif token.kind == :inline_table_end
             node = pop!(stack)
         elseif token.kind == :table_begin  # [foo.bar]
             node = root
