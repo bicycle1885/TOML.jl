@@ -769,3 +769,9 @@ data = TOML.parse(
              "name" => "banana",
              "variety" => [Dict("name" => "plantain")])
     ])
+
+data = TOML.parse(IOBuffer(
+"""
+x = 100
+"""))
+@test data == Dict("x" => 100)

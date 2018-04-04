@@ -338,11 +338,13 @@ function parsekeyvalue(reader::StreamReader)
     end
 end
 
-function parse(str::AbstractString)
+parse(str::AbstractString) = parse(IOBuffer(str))
+
+function parse(input::IO)
     table() = Dict{String,Any}()
     array() = []
     root = table()
-    reader = StreamReader(IOBuffer(str))
+    reader = StreamReader(input)
     key = nothing
     node = root
     stack = []
