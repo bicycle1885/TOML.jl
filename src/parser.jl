@@ -339,12 +339,29 @@ function parse(str::AbstractString)
     reader = StreamReader(IOBuffer(str))
     key = nothing
     node = root
+    stack = []
     while (token = parsetoken(reader)).kind != :eof
         if iskey(token)
             key = keyname(token)
         elseif isatomicvalue(token)
-            @assert !haskey(node, key)  # TODO: must be checked by the stream reader
-            node[key] = value(token)
+            if node isa Array
+                push!(node, value(token))
+            else
+                @assert !haskey(node, key)  # TODO: must be checked by the stream reader
+                node[key] = value(token)
+            end
+        elseif token.kind == :inline_array_begin
+            push!(stack, node)
+            if node isa Array
+                push!(node, [])
+                node = node[end]
+            else
+                @assert !haskey(node, key)
+                node[key] = []
+                node = node[key]
+            end
+        elseif token.kind == :inline_array_end
+            node = pop!(stack)
         elseif token.kind == :table_begin  # [foo.bar]
             node = root
             while (token = parsetoken(reader)).kind != :table_end

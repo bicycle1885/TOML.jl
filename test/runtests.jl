@@ -644,6 +644,12 @@ data = TOML.parse("foo = 100")
 data = TOML.parse("foo = 100\nbar = 1.23")
 @test data == Dict("foo" => 100, "bar" => 1.23)
 
+data = TOML.parse("x = [1]\ny = [1,2,3]\nz = []")
+@test data == Dict("x" => [1], "y" => [1,2,3], "z" => [])
+
+data = TOML.parse("x = [[1,2,3], [1,2]]\ny = [[1,2]]\nz = [[[]]]")
+@test data == Dict("x" => [[1,2,3], [1,2]], "y" => [[1,2]], "z" => [[[]]])
+
 data = TOML.parse(
 """
 key1 = 0
