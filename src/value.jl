@@ -5,7 +5,7 @@ const COMPILE_OPTIONS = PCRE.UTF | PCRE.ALT_BSUX | PCRE.EXTENDED
 const MATCH_OPTIONS   = PCRE.PARTIAL_SOFT
 
 const RE_BASIC_STRING = Regex(raw"""
-^
+\A
 "
 (?:
     # non-control, non-backslash character
@@ -23,7 +23,7 @@ const RE_BASIC_STRING = Regex(raw"""
 """, COMPILE_OPTIONS, MATCH_OPTIONS)
 
 const RE_MULTILINE_BASIC_STRING = Regex(raw"""
-^
+\A
 \"\"\"
 (?:
     # non-control, non-backslash character
@@ -45,7 +45,7 @@ const RE_MULTILINE_BASIC_STRING = Regex(raw"""
 """, COMPILE_OPTIONS, MATCH_OPTIONS)
 
 const RE_LITERAL_STRING = Regex(raw"""
-^
+\A
 '
     # non-control character
     [^\x00-\x1f]*?
@@ -53,7 +53,7 @@ const RE_LITERAL_STRING = Regex(raw"""
 """, COMPILE_OPTIONS, MATCH_OPTIONS)
 
 const RE_MULTILINE_LITERAL_STRING = Regex(raw"""
-^
+\A
 '''
 (?:
     # non-control character
@@ -65,23 +65,23 @@ const RE_MULTILINE_LITERAL_STRING = Regex(raw"""
 """, COMPILE_OPTIONS, MATCH_OPTIONS)
 
 const RE_BINARY = Regex(raw"""
-^0b[01](?:_?[01]+)*
+\A0b[01](?:_?[01]+)*
 """, COMPILE_OPTIONS, MATCH_OPTIONS)
 
 const RE_OCTAL = Regex(raw"""
-^0o[0-7](?:_?[0-7]+)*
+\A0o[0-7](?:_?[0-7]+)*
 """, COMPILE_OPTIONS, MATCH_OPTIONS)
 
 const RE_DECIMAL = Regex(raw"""
-^[-+]?(?:0|[1-9](?:_?[0-9]+)*)
+\A[-+]?(?:0|[1-9](?:_?[0-9]+)*)
 """, COMPILE_OPTIONS, MATCH_OPTIONS)
 
 const RE_HEXADECIMAL = Regex(raw"""
-^0x[0-9A-Fa-f](?:_?[0-9A-Fa-f]+)*
+\A0x[0-9A-Fa-f](?:_?[0-9A-Fa-f]+)*
 """, COMPILE_OPTIONS, MATCH_OPTIONS)
 
 const RE_FLOAT = Regex(raw"""
-^
+\A
 (?:
     # exponent
     [-+]? (?:0|[1-9](?:_?[0-9]+)*) (?:\.[0-9](?:_?[0-9]+)*)? [eE] [-+]? (?:0|[1-9](?:_?[0-9]+)*) |
@@ -94,10 +94,10 @@ const RE_FLOAT = Regex(raw"""
 )
 """, COMPILE_OPTIONS, MATCH_OPTIONS)
 
-const RE_BOOLEAN = Regex(raw"true|false", COMPILE_OPTIONS, MATCH_OPTIONS)
+const RE_BOOLEAN = Regex(raw"\A(?:true|false)", COMPILE_OPTIONS, MATCH_OPTIONS)
 
 const RE_DATETIME = Regex(raw"""
-^
+\A
 # full date
 [0-9]{4}-[0-9]{2}-[0-9]{2}
 # the 'T' or a space (RFC 3339 section 5.6)
@@ -109,7 +109,7 @@ const RE_DATETIME = Regex(raw"""
 """, COMPILE_OPTIONS, MATCH_OPTIONS)
 
 const RE_LOCAL_DATETIME = Regex(raw"""
-^
+\A
 # full date
 [0-9]{4}-[0-9]{2}-[0-9]{2}
 # the 'T' or a space (RFC 3339 section 5.6)
@@ -119,12 +119,13 @@ const RE_LOCAL_DATETIME = Regex(raw"""
 """, COMPILE_OPTIONS, MATCH_OPTIONS)
 
 const RE_LOCAL_DATE = Regex(raw"""
-^
+\A
 # full date
 [0-9]{4}-[0-9]{2}-[0-9]{2}
 """, COMPILE_OPTIONS, MATCH_OPTIONS)
 
 const RE_LOCAL_TIME = Regex(raw"""
+\A
 # partial time
 [0-9]{2}:[0-9]{2}:[0-9]{2} (?:\.[0-9]+)?
 """, COMPILE_OPTIONS, MATCH_OPTIONS)
