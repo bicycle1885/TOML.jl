@@ -151,7 +151,7 @@ function parsetoken(reader::StreamReader)
     if !isempty(reader.parsequeue)
         return popfirst!(reader.parsequeue)
     end
-    accept(token) = push!(reader.parsequeue, token)
+    emit(token) = push!(reader.parsequeue, token)
     stack = reader.stack
     top = isempty(stack) ? :none : stack[end]
     token = peektoken(reader)
@@ -161,7 +161,7 @@ function parsetoken(reader::StreamReader)
             return token
         elseif token.kind == :single_bracket_left
             readtoken(reader)
-            accept(token)
+            emit(token)
             push!(stack, :inline_array)
             return TOKEN_INLINE_ARRAY_BEGIN
         elseif token.kind == :single_bracket_right
@@ -170,26 +170,26 @@ function parsetoken(reader::StreamReader)
             if isempty(stack) || stack[end] != :inline_array
                 reader.expectvalue = false
             end
-            accept(TOKEN_INLINE_ARRAY_END)
+            emit(TOKEN_INLINE_ARRAY_END)
             while peektoken(reader).kind ∈ (:comment, :whitespace, :newline)
-                accept(readtoken(reader))
+                emit(readtoken(reader))
             end
             if peektoken(reader).kind == :comma
-                accept(readtoken(reader))
+                emit(readtoken(reader))
             end
             return token
         elseif token.kind == :curly_brace_left
             readtoken(reader)
-            accept(token)
+            emit(token)
             push!(stack, :inline_table)
             return TOKEN_INLINE_TABLE_BEGIN
         elseif isatomicvalue(token)
             readtoken(reader)
             while peektoken(reader).kind ∈ (:comment, :whitespace, :newline)
-                accept(readtoken(reader))
+                emit(readtoken(reader))
             end
             if peektoken(reader).kind == :comma
-                accept(readtoken(reader))
+                emit(readtoken(reader))
             end
             return token
         else
@@ -202,21 +202,21 @@ function parsetoken(reader::StreamReader)
         elseif token.kind == :curly_brace_right
             readtoken(reader)
             pop!(stack)
-            accept(TOKEN_INLINE_TABLE_END)
+            emit(TOKEN_INLINE_TABLE_END)
             while peektoken(reader).kind == :whitespace
-                accept(readtoken(reader))
+                emit(readtoken(reader))
             end
             if peektoken(reader).kind == :comma
-                accept(readtoken(reader))
+                emit(readtoken(reader))
             end
             return token
         elseif token.kind ∈ (:bare_key, :quoted_key)
             parsekeyvalue(reader)
             if peektoken(reader).kind == :whitespace
-                accept(readtoken(reader))
+                emit(readtoken(reader))
             end
             if peektoken(reader).kind == :comma
-                accept(readtoken(reader))
+                emit(readtoken(reader))
             elseif isatomicvalue(peektoken(reader)) || iscontainer(peektoken(reader))
                 # ok
             elseif peektoken(reader).kind ∈ (:curly_brace_right, :bare_key, :quoted_key, :whitespace)
@@ -234,7 +234,7 @@ function parsetoken(reader::StreamReader)
     elseif token.kind ∈ (:bare_key, :quoted_key)
         value = parsekeyvalue(reader)
         if isatomicvalue(value) && peektoken(reader).kind == :whitespace
-            accept(readtoken(reader))
+            emit(readtoken(reader))
             if peektoken(reader).kind ∉ (:newline, :comment)
                 unexpectedtoken(peektoken(reader), reader.linenum)
             end
@@ -245,26 +245,26 @@ function parsetoken(reader::StreamReader)
         # '[[' whitespace? ((bare_key|quoted_key) whitespace?) ('.' whitespace? (bare_key|quoted_key) whitespace?)* ']]'
         close = token.kind == :single_bracket_left ? :single_bracket_right : :double_brackets_right
         readtoken(reader)
-        accept(token)
+        emit(token)
         let token = readtoken(reader)
-            token.kind == :whitespace && (accept(token); token = readtoken(reader))
+            token.kind == :whitespace && (emit(token); token = readtoken(reader))
             if token.kind ∈ (:bare_key, :quoted_key)
-                accept(token)
-                peektoken(reader).kind == :whitespace && accept(readtoken(reader))
+                emit(token)
+                peektoken(reader).kind == :whitespace && emit(readtoken(reader))
             else
                 unexpectedtoken(token, reader.linenum)
             end
             while (token = readtoken(reader)).kind != close
                 if token.kind == :dot
-                    accept(token)
+                    emit(token)
                 else
                     unexpectedtoken(token, reader.linenum)
                 end
                 token = readtoken(reader)
-                token.kind == :whitespace && (accept(token); token = readtoken(reader))
+                token.kind == :whitespace && (emit(token); token = readtoken(reader))
                 if token.kind ∈ (:bare_key, :quoted_key)
-                    accept(token)
-                    peektoken(reader).kind == :whitespace && accept(readtoken(reader))
+                    emit(token)
+                    peektoken(reader).kind == :whitespace && emit(readtoken(reader))
                 else
                     unexpectedtoken(token, reader.linenum)
                 end
@@ -272,13 +272,13 @@ function parsetoken(reader::StreamReader)
             if token.kind != close
                 unexpectedtoken(token, reader.linenum)
             end
-            accept(token)
+            emit(token)
         end
         if token.kind == :single_bracket_left
-            accept(TOKEN_TABLE_END)
+            emit(TOKEN_TABLE_END)
             return TOKEN_TABLE_BEGIN
         else
-            accept(TOKEN_ARRAY_END)
+            emit(TOKEN_ARRAY_END)
             return TOKEN_ARRAY_BEGIN
         end
     else
@@ -288,27 +288,27 @@ end
 
 function parsekeyvalue(reader::StreamReader)
     # (bare_key | quoted_key) whitespace? '=' whitespace? (atomic_value | '[' | '{')
-    accept(token) = push!(reader.parsequeue, token)
+    emit(token) = push!(reader.parsequeue, token)
     emitkey = false
     @label readkey
     token = readtoken(reader)
     if !iskey(token)
         unexpectedtoken(token, reader.linenum)
     elseif emitkey
-        accept(token)
+        emit(token)
     end
     token = readtoken(reader)
     if token.kind == :whitespace
-        accept(token)
+        emit(token)
         token = readtoken(reader)
     end
     if token.kind == :equal
-        accept(token)
+        emit(token)
     elseif token.kind == :dot
         # dotted keys
-        accept(token)
+        emit(token)
         if peektoken(reader).kind == :whitespace
-            accept(readtoken(reader))
+            emit(readtoken(reader))
         end
         emitkey = true
         @goto readkey
@@ -317,20 +317,20 @@ function parsekeyvalue(reader::StreamReader)
     end
     token = readtoken(reader)
     if token.kind == :whitespace
-        accept(token)
+        emit(token)
         token = readtoken(reader)
     end
     if isatomicvalue(token)
-        accept(token)
+        emit(token)
         return token
     elseif token.kind == :single_bracket_left  # inline array
-        accept(TOKEN_INLINE_ARRAY_BEGIN)
-        accept(token)
+        emit(TOKEN_INLINE_ARRAY_BEGIN)
+        emit(token)
         push!(reader.stack, :inline_array)
         return token
     elseif token.kind == :curly_brace_left  # inline table
-        accept(TOKEN_INLINE_TABLE_BEGIN)
-        accept(token)
+        emit(TOKEN_INLINE_TABLE_BEGIN)
+        emit(token)
         push!(reader.stack, :inline_table)
         return token
     else
