@@ -136,9 +136,14 @@ end
 
 # utilities
 function unwrap_basic_string(s::String)
-    return unescape_string(chop(s, head=1, tail=1))
+    if contains_backslash(s)
+        return unescape_string(chop(s, head=1, tail=1))
+    else
+        return String(chop(s, head=1, tail=1))
+    end
 end
 unwrap_literal_string(s::String) = String(chop(s, head=1, tail=1))
+contains_backslash(s::String) = ccall(:memchr, Ptr{Cvoid}, (Ptr{Cvoid}, Cint, Csize_t), pointer(s), Cint(0x5c), sizeof(s)) != C_NULL
 drop(s, c) = replace(s, c => "")
 normnewlines(s) = replace(replace(s, r"\r" => ""), r"^\n" => "")
 trimwhitespace(s) = replace(s, r"(?:^\r?\n)|(?:\\\s+)" => "")
