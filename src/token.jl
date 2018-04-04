@@ -112,7 +112,6 @@ function value(token::Token)
     elseif token.kind == :basic_string
         return unwrap_basic_string(token.text)
     elseif token.kind == :multiline_basic_string
-        # TODO: support unicode escaping (\UXXXXXXXX)
         return trimwhitespace(normnewlines(chop(token.text, head=3, tail=3)))
     elseif token.kind == :literal_string
         return unwrap_literal_string(token.text)
@@ -137,7 +136,6 @@ end
 
 # utilities
 function unwrap_basic_string(s::String)
-    # TODO: support unicode escaping (\UXXXXXXXX)
     return unescape_string(chop(s, head=1, tail=1))
 end
 unwrap_literal_string(s::String) = String(chop(s, head=1, tail=1))

@@ -56,6 +56,7 @@ using Dates
 @test TOML.value(Token(:basic_string, "\"αβγあいう\"")) === "αβγあいう"
 @test TOML.value(Token(:basic_string, "\"escaping: \\\" \\b \\t \\n \\f \\r \\\" \\\\ \"")) === "escaping: \" \b \t \n \f \r \" \\ "
 @test TOML.value(Token(:basic_string, "\"unicode: \\u3042\"")) === "unicode: あ"
+@test TOML.value(Token(:basic_string, "\"unicode: \\U00003042\"")) === "unicode: あ"
 
 # multiline basic string
 @test TOML.value(Token(:multiline_basic_string, "\"\"\"\"\"\"")) === ""
