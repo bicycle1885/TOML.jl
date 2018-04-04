@@ -85,6 +85,7 @@ end
 function peekchar(input::IO, buffer::Buffer; offset::Int=0)
     ensurebytes!(input, buffer, offset+4)
     if buffer.p + offset ≤ buffer.p_end
+        # NOTE: UTF-8 encoding is validated in fillbuffer!
         b = buffer.data[buffer.p+offset]
         u = UInt32(b) << 24
         if b < 0b10000000
@@ -96,7 +97,7 @@ function peekchar(input::IO, buffer::Buffer; offset::Int=0)
             u |= UInt32(buffer.data[buffer.p+offset+1]) << 16
             u |= UInt32(buffer.data[buffer.p+offset+2]) <<  8
             return reinterpret(Char, u), 3
-        elseif b ≤ 0b11110111
+        else @assert b ≤ 0b11110111
             u |= UInt32(buffer.data[buffer.p+offset+1]) << 16
             u |= UInt32(buffer.data[buffer.p+offset+2]) <<  8
             u |= UInt32(buffer.data[buffer.p+offset+3])
