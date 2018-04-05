@@ -753,6 +753,7 @@ qux = 100
         Dict("x" => 10, "y" => 20, "z" => 30),
     ],
     "bar" => Dict("baz" => [Dict("qux" => 100)]))
+@test data["foo"] isa Vector{Dict{String,Any}}
 
 data = TOML.parse(
 """

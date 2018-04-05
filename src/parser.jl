@@ -456,7 +456,7 @@ function parse(input::IO)
                     node = node[end]
                 end
             end
-            node = push!(get!(node, keys[end], []), Table())[end]
+            node = push!(get!(node, keys[end], Table[]), Table())[end]
             key = nothing
         else
             # ignore
