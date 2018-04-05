@@ -132,7 +132,7 @@ function alltokens(str)
     return tokens
 end
 
-@test_throws ErrorException("invalid UTF-8 sequence") alltokens(String(rand(UInt8, 20)))
+@test_throws ErrorException("invalid UTF-8 sequence") alltokens(String([0x80]))
 
 tokens = alltokens("")
 @test tokens == Token[]

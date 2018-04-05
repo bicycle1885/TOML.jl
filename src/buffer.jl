@@ -46,25 +46,35 @@ function fillbuffer!(input::IO, buffer::Buffer)
     end
     # fill data into the buffer
     n = min(n_avail, n_free)
+    @assert n > 0
     unsafe_read(input, pointer(buffer.data, buffer.p_fill + 1), n)
     buffer.p_fill += n
     # align p_end to a UTF-8 boundary
     p_new = buffer.p_end + 1
-    buffer.p_end = buffer.p_fill
-    if buffer.data[buffer.p_end] ≤ 0b01111111
+    p_end = buffer.p_fill
+    if buffer.data[p_end] ≤ 0b01111111
         # ascii
+        buffer.p_end = p_end
     else
-        (buffer.data[buffer.p_end] >> 6) == 0b10 && (buffer.p_end -= 1)
-        (buffer.data[buffer.p_end] >> 6) == 0b10 && (buffer.p_end -= 1)
-        (buffer.data[buffer.p_end] >> 6) == 0b10 && (buffer.p_end -= 1)
-        if buffer.p_fill == buffer.p_end + leading_ones(buffer.data[buffer.p_end])
+        for i in 1:3
+            if buffer.data[p_end] >> 6 == 0b10
+                p_end -= 1
+            else
+                break
+            end
+            if p_end < buffer.p
+                @goto utf8error
+            end
+        end
+        if buffer.p_fill == p_end + leading_ones(buffer.data[p_end])
             buffer.p_end = buffer.p_fill
         else
-            buffer.p_end -= 1
+            buffer.p_end = p_end - 1
         end
     end
     # validate UTF-8 encoding
     if buffer.p_end > p_new && !is_valid_utf8(buffer.data, p_new, buffer.p_end)
+        @label utf8error
         throw(ErrorException("invalid UTF-8 sequence"))
     end
     return n
