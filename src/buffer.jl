@@ -25,31 +25,30 @@ function fillbuffer!(input::IO, buffer::Buffer)
     if buffer.p_eof ≥ 0
         return 0
     end
-    if (len = buffer.p_fill - buffer.p + 1) > 0
+    if buffer.p < buffer.p_fill
         # move data
-        copyto!(buffer.data, 1, buffer.data, buffer.p, len)
-        buffer.p_fill -= buffer.p - 1
+        shift = buffer.p - 1
+        copyto!(buffer.data, 1, buffer.data, buffer.p, buffer.p_fill - buffer.p + 1)
         buffer.p = 1
-        if buffer.p_eof != -1
-            buffer.p_eof -= len
-        end
-    end
-    n::Int = length(buffer.data) - buffer.p_fill
-    if n == 0
-        resize!(buffer.data, length(buffer.data) * 2)
-        n = length(buffer.data) - buffer.p_fill
+        buffer.p_end -= shift
+        buffer.p_fill -= shift
     end
     if eof(input)
         # found EOF
         buffer.p_end = buffer.p_eof = buffer.p_fill
         return 0
-    else
-        # read data into the buffer
-        n = min(n, bytesavailable(input))
-        unsafe_read(input, pointer(buffer.data, buffer.p_fill + 1), n)
-        buffer.p_fill += n
     end
-    # align UTF-8 boundary
+    n_avail = bytesavailable(input)
+    n_free = length(buffer.data) - buffer.p_fill
+    if n_free == 0  # no space to fill data
+        resize!(buffer.data, length(buffer.data) * 2)
+        n_free = length(buffer.data) - buffer.p_fill
+    end
+    # fill data into the buffer
+    n = min(n_avail, n_free)
+    unsafe_read(input, pointer(buffer.data, buffer.p_fill + 1), n)
+    buffer.p_fill += n
+    # align p_end to a UTF-8 boundary
     p_new = buffer.p_end + 1
     buffer.p_end = buffer.p_fill
     if buffer.data[buffer.p_end] ≤ 0b01111111

@@ -4,7 +4,7 @@ using Test
 using Dates
 
 # Use a small buffer size to detect buffering bugs.
-TOML.INIT_BUFFER_SIZE[] = 16
+TOML.INIT_BUFFER_SIZE[] = 4
 
 # bare key
 @test TOML.keyname(Token(:bare_key, "foo")) === "foo"
