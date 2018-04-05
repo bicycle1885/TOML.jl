@@ -347,6 +347,40 @@ function parsekeyvalue(reader::StreamReader)
     end
 end
 
+# Infer the type of elements in the current array.
+function arraytype(reader::StreamReader)
+    t = Any
+    token = parsetoken(reader)
+    tokens = [token]
+    while token.kind != :inline_array_end && t == Any
+        if isatomicvalue(token)
+            if issigned(token)
+                t = Int
+            elseif isunsigned(token)
+                t = UInt
+            elseif isfloat(token)
+                t = Float64
+            elseif isstring(token)
+                t = String
+            elseif isboolean(token)
+                t = Bool
+            else
+                assert(false)
+            end
+        elseif token.kind == :inline_array_begin
+            t = Vector
+        elseif token.kind == :inline_table_begin
+            t = Dict{String}
+        else
+            # ignore
+        end
+        token = parsetoken(reader)
+        push!(tokens, token)
+    end
+    prepend!(reader.parsequeue, tokens)
+    return t
+end
+
 parse(str::AbstractString) = parse(IOBuffer(str))
 parsefile(filename::AbstractString) = open(parse, filename)
 
@@ -363,7 +397,12 @@ function parse(input::IO)
             key = keyname(token)
         elseif isatomicvalue(token)
             if node isa Array
-                push!(node, value(token))
+                x = value(token)
+                if !isempty(node) && typeof(node[1]) != typeof(x)
+                    # This line number may be wrong.
+                    parse_error("mixed array types", reader.linenum)
+                end
+                push!(node, x)
             else
                 @assert !haskey(node, key)  # TODO: must be checked by the stream reader
                 node[key] = value(token)
@@ -371,11 +410,11 @@ function parse(input::IO)
         elseif token.kind == :inline_array_begin
             push!(stack, node)
             if node isa Array
-                push!(node, [])
+                push!(node, arraytype(reader)[])
                 node = node[end]
             else
                 @assert !haskey(node, key)
-                node[key] = []
+                node[key] = arraytype(reader)[]
                 node = node[key]
             end
         elseif token.kind == :inline_array_end

@@ -39,6 +39,8 @@ const TOKEN_CURLY_BRACE_RIGHT     = Token(:curly_brace_right, "}")
 istext(token::Token) = !isempty(token.text)
 isevent(token::Token) = !istext(token)
 isstring(token::Token) = token.kind ∈ (:basic_string, :multiline_basic_string, :literal_string, :multiline_literal_string)
+issigned(token::Token) = token.kind == :decimal
+isunsigned(token::Token) = token.kind ∈ (:binary, :octal, :hexadecimal)
 isinteger(token::Token) = token.kind == :decimal || token.kind == :binary || token.kind == :octal || token.kind == :hexadecimal
 isfloat(token::Token) = token.kind == :float
 isboolean(token::Token) = token.kind == :boolean

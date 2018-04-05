@@ -696,9 +696,13 @@ data = TOML.parse("sushi = \"🍣\"\nbeer = \"🍺\"")
 
 data = TOML.parse("x = [1]\ny = [1,2,3]\nz = []")
 @test data == Dict("x" => [1], "y" => [1,2,3], "z" => [])
+@test data["x"] isa Vector{Int}
+@test data["y"] isa Vector{Int}
+@test data["z"] isa Vector{Any}
 
 data = TOML.parse("x = [[1,2,3], [1,2]]\ny = [[1,2]]\nz = [[[]]]")
 @test data == Dict("x" => [[1,2,3], [1,2]], "y" => [[1,2]], "z" => [[[]]])
+@test data["x"] isa Vector{Vector}
 
 data = TOML.parse("name = { first = \"Tom\", last = \"Preston-Werner\" }")
 @test data == Dict("name" => Dict("first" => "Tom", "last" => "Preston-Werner"))
@@ -787,3 +791,6 @@ data = TOML.parse(IOBuffer(
 x = 100
 """))
 @test data == Dict("x" => 100)
+
+@test_throws TOML.ParseError("mixed array types at line 1") TOML.parse("x = [1, 1.0]")
+@test_throws TOML.ParseError("mixed array types at line 1") TOML.parse("x = [[1,2], 3]")
