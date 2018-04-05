@@ -1,6 +1,8 @@
 # Buffer
 # ======
 
+const INIT_BUFFER_SIZE = Ref(256)
+
 mutable struct Buffer
     # UTF-8 encoded sequence + 0-3 incomplete bytes
     data::Vector{UInt8}
@@ -14,7 +16,7 @@ mutable struct Buffer
     p_eof::Int
 
     function Buffer()
-        data = Vector{UInt8}(undef, 16)
+        data = Vector{UInt8}(undef, INIT_BUFFER_SIZE[])
         return new(data, 1, 0, 0, -1)
     end
 end
