@@ -39,20 +39,29 @@ function readtoken(reader::StreamReader)
         char, n = char_n
         if iswhitespace(char)  # space or tab
             n = scanwhitespace(input, buffer)
-            return Token(:whitespace, taketext!(buffer, n))
+            if n == 1
+                consume!(buffer, 1)
+                if char == ' '
+                    return TOKEN_WHITESPACE_SPACE
+                else
+                    return TOKEN_WHITESPACE_TAB
+                end
+            else
+                return Token(:whitespace, taketext!(buffer, n))
+            end
         elseif char ∈ ('\r', '\n')  # newline
             consume!(buffer, 1)
             if char == '\r'
                 if peekchar(input, buffer) == ('\n', 1)
                     consume!(buffer, 1)
                     reader.linenum += 1
-                    return Token(:newline, "\r\n")
+                    return TOKEN_NEWLINE_CRLF
                 else
                     parse_error("line feed (LF) is expected after carriage return (CR)", reader.linenum)
                 end
             else
                 reader.linenum += 1
-                return Token(:newline, "\n")
+                return TOKEN_NEWLINE_LF
             end
         elseif char == '#'  # comment
             n = scanwhile(c -> c != '\r' && c != '\n', input, buffer)
@@ -60,14 +69,14 @@ function readtoken(reader::StreamReader)
         elseif reader.expectvalue
             if char == '['
                 consume!(buffer, 1)
-                return Token(:single_bracket_left, "[")
+                return TOKEN_SINGLE_BRACKET_LEFT
             elseif char == ']'
                 consume!(buffer, 1)
-                return Token(:single_bracket_right, "]")
+                return TOKEN_SINGLE_BRACKET_RIGHT
             elseif char == '{'
                 consume!(buffer, 1)
                 reader.expectvalue = false
-                return Token(:curly_brace_left, "{")
+                return TOKEN_CURLY_BRACE_LEFT
             end
             kind, n = scanvalue(input, buffer)
             if kind == :novalue
@@ -85,7 +94,7 @@ function readtoken(reader::StreamReader)
         elseif char == '='
             consume!(buffer, 1)
             reader.expectvalue = true
-            return Token(:equal, "=")
+            return TOKEN_EQUAL
         elseif iskeychar(char)  # bare key
             n = scanbarekey(input, buffer)
             return Token(:bare_key, taketext!(buffer, n))
@@ -99,37 +108,37 @@ function readtoken(reader::StreamReader)
             consume!(buffer, 1)
             if peekchar(input, buffer) == ('[', 1)
                 consume!(buffer, 1)
-                return Token(:double_brackets_left, "[[")
+                return TOKEN_DOUBLE_BRACKETS_LEFT
             else
-                return Token(:single_bracket_left, "[")
+                return TOKEN_SINGLE_BRACKET_LEFT
             end
         elseif char == ']'  # table, array of tables, or inline table
             consume!(buffer, 1)
             if !isempty(reader.stack) && reader.stack[end] == :inline_array
-                return Token(:single_bracket_right, "]")
+                return TOKEN_SINGLE_BRACKET_RIGHT
             elseif peekchar(input, buffer) == (']', 1)
                 consume!(buffer, 1)
-                return Token(:double_brackets_right, "]]")
+                return TOKEN_DOUBLE_BRACKETS_RIGHT
             else
-                return Token(:single_bracket_right, "]")
+                return TOKEN_SINGLE_BRACKET_RIGHT
             end
         elseif char == '.'  # dot
             consume!(buffer, 1)
-            return Token(:dot, ".")
+            return TOKEN_DOT
         elseif char == ','  # comma
             consume!(buffer, 1)
             if !isempty(reader.stack) && reader.stack[end] == :inline_array
                 reader.expectvalue = true
-                return Token(:comma, ",")
+                return TOKEN_COMMA
             elseif !isempty(reader.stack) && reader.stack[end] == :inline_table
                 reader.expectvalue = false
-                return Token(:comma, ",")
+                return TOKEN_COMMA
             else
                 parse_error("unexpected ','", reader.linenum)
             end
         elseif char == '}'  # inline table
             consume!(buffer, 1)
-            return Token(:curly_brace_right, "}")
+            return TOKEN_CURLY_BRACE_RIGHT
         else
             parse_error("unexpected '$(char)'", reader.linenum)
         end

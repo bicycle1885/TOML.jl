@@ -137,6 +137,9 @@ tokens = alltokens("")
 tokens = alltokens("  ")
 @test tokens == [Token(:whitespace, "  ")]
 
+tokens = alltokens("\t")
+@test tokens == [Token(:whitespace, "\t")]
+
 tokens = alltokens("\r\n")
 @test tokens == [ Token(:newline, "\r\n") ]
 

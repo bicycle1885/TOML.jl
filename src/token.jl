@@ -18,8 +18,23 @@ const TOKEN_INLINE_ARRAY_END   = Token(:inline_array_end,   "")
 const TOKEN_INLINE_TABLE_BEGIN = Token(:inline_table_begin, "")
 const TOKEN_INLINE_TABLE_END   = Token(:inline_table_end,   "")
 
-const TOKEN_INIT = Token(:init, "")
 const TOKEN_EOF = Token(:eof, "")
+
+const TOKEN_WHITESPACE_SPACE = Token(:whitespace, " ")
+const TOKEN_WHITESPACE_TAB   = Token(:whitespace, "\t")
+const TOKEN_NEWLINE_LF       = Token(:newline, "\n")
+const TOKEN_NEWLINE_CRLF     = Token(:newline, "\r\n")
+
+const TOKEN_EQUAL = Token(:equal, "=")
+const TOKEN_COMMA = Token(:comma, ",")
+const TOKEN_DOT   = Token(:dot, ".")
+
+const TOKEN_SINGLE_BRACKET_LEFT   = Token(:single_bracket_left, "[")
+const TOKEN_SINGLE_BRACKET_RIGHT  = Token(:single_bracket_right, "]")
+const TOKEN_DOUBLE_BRACKETS_LEFT  = Token(:double_brackets_left, "[[")
+const TOKEN_DOUBLE_BRACKETS_RIGHT = Token(:double_brackets_right, "]]")
+const TOKEN_CURLY_BRACE_LEFT      = Token(:curly_brace_left, "{")
+const TOKEN_CURLY_BRACE_RIGHT     = Token(:curly_brace_right, "}")
 
 istext(token::Token) = !isempty(token.text)
 isevent(token::Token) = !istext(token)
