@@ -688,6 +688,9 @@ data = TOML.parse("foo = 100")
 data = TOML.parse("foo = 100\nbar = 1.23")
 @test data == Dict("foo" => 100, "bar" => 1.23)
 
+data = TOML.parse("sushi = \"🍣\"\nbeer = \"🍺\"")
+@test data == Dict("sushi" => "🍣", "beer" => "🍺")
+
 data = TOML.parse("x = [1]\ny = [1,2,3]\nz = []")
 @test data == Dict("x" => [1], "y" => [1,2,3], "z" => [])
 
