@@ -131,7 +131,7 @@ function scanwhitespace(input::IO, buffer::Buffer)
     n = 0
     @label scan
     while buffer.p + n ≤ buffer.p_end
-        if !iswhitespace(buffer.data[buffer.p+n])
+        @inbounds if !iswhitespace(buffer.data[buffer.p+n])
             break
         end
         n += 1
@@ -150,7 +150,7 @@ function scanbarekey(input::IO, buffer::Buffer)
     n = 0
     @label scan
     while buffer.p + n ≤ buffer.p_end
-        if !isbarekey(buffer.data[buffer.p+n])
+        @inbounds if !isbarekey(buffer.data[buffer.p+n])
             break
         end
         n += 1
