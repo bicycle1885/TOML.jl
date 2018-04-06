@@ -804,19 +804,19 @@ d = 2
 
 @test_throws TOML.ParseError("mixed array types at line 1") TOML.parse("x = [1, 1.0]")
 @test_throws TOML.ParseError("mixed array types at line 1") TOML.parse("x = [[1,2], 3]")
-@test_throws TOML.ParseError("found a duplicated table at line 4") TOML.parse("""
+@test_throws TOML.ParseError("found a duplicated definition at line 4") TOML.parse(
+"""
 [a]
 b = 1
 
 [a]
 c = 2
 """)
-#=
-@test_throws TOML.ParseError("found a duplicated key at line 4") TOML.parse("""
+@test_throws TOML.ParseError("found a duplicated definition at line 4") TOML.parse(
+"""
 [a]
 b = 1
 
 [a.b]
 c = 2
 """)
-=#

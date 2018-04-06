@@ -433,35 +433,40 @@ function parse(input::IO)
         elseif token.kind == :inline_table_end
             node = pop!(stack)
         elseif token.kind == :table_begin  # [foo.bar]
-            node = root
-            tablekey = String[]
+            keys = String[]
             while (token = parsetoken(reader)).kind != :table_end
-                if iskey(token)
-                    name = keyname(token)
-                    push!(tablekey, name)
-                    node = get!(node, name, Table())
-                    if node isa Array
-                        node = node[end]
-                    end
+                iskey(token) && push!(keys, keyname(token))
+            end
+            node = root
+            for i in 1:length(keys)
+                node = get!(node, keys[i], Table())
+                if node isa Table
+                    # ok
+                elseif node isa Array
+                    node = node[end]
+                else
+                    parse_error("found a duplicated definition", reader.linenum)
                 end
             end
-            if tablekey ∈ tablekeys
-                parse_error("found a duplicated table", reader.linenum)
+            if keys ∈ tablekeys
+                parse_error("found a duplicated definition", reader.linenum)
             end
-            push!(tablekeys, tablekey)
+            push!(tablekeys, keys)
             key = nothing
         elseif token.kind == :array_begin  # [[foo.bar]]
-            node = root
             keys = String[]
             while (token = parsetoken(reader)).kind != :array_end
-                if iskey(token)
-                    push!(keys, keyname(token))
-                end
+                iskey(token) && push!(keys, keyname(token))
             end
+            node = root
             for i in 1:length(keys)-1
                 node = get!(node, keys[i], Table())
-                if node isa Array
+                if node isa Table
+                    # ok
+                elseif node isa Array
                     node = node[end]
+                else
+                    parse_error("found a duplicated definition", reader.linenum)
                 end
             end
             node = push!(get!(node, keys[end], Table[]), Table())[end]
