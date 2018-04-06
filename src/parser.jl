@@ -387,8 +387,9 @@ parsefile(filename::AbstractString) = open(parse, filename)
 const Table = Dict{String,Any}
 
 function parse(input::IO)
-    root = Table()
     reader = StreamReader(input)
+    root = Table()
+    tablekeys = Set{Vector{String}}()
     key = nothing
     node = root
     stack = []
@@ -433,14 +434,21 @@ function parse(input::IO)
             node = pop!(stack)
         elseif token.kind == :table_begin  # [foo.bar]
             node = root
+            tablekey = String[]
             while (token = parsetoken(reader)).kind != :table_end
                 if iskey(token)
-                    node = get!(node, keyname(token), Table())
+                    name = keyname(token)
+                    push!(tablekey, name)
+                    node = get!(node, name, Table())
                     if node isa Array
                         node = node[end]
                     end
                 end
             end
+            if tablekey ∈ tablekeys
+                parse_error("found a duplicated table", reader.linenum)
+            end
+            push!(tablekeys, tablekey)
             key = nothing
         elseif token.kind == :array_begin  # [[foo.bar]]
             node = root
