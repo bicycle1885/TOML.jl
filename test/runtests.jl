@@ -793,5 +793,32 @@ x = 100
 """))
 @test data == Dict("x" => 100)
 
+data = TOML.parse("""
+[a.b]
+c = 1
+
+[a]
+d = 2
+""")
+@test data == Dict("a" => Dict("b" => Dict("c" => 1), "d" => 2))
+
 @test_throws TOML.ParseError("mixed array types at line 1") TOML.parse("x = [1, 1.0]")
 @test_throws TOML.ParseError("mixed array types at line 1") TOML.parse("x = [[1,2], 3]")
+#=
+@test_throws TOML.ParseError("found a duplicated key at line 4") TOML.parse("""
+[a]
+b = 1
+
+[a]
+c = 2
+""")
+=#
+#=
+@test_throws TOML.ParseError("found a duplicated key at line 4") TOML.parse("""
+[a]
+b = 1
+
+[a.b]
+c = 2
+""")
+=#
