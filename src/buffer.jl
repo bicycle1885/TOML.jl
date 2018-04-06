@@ -121,7 +121,9 @@ function peekchar(input::IO, buffer::Buffer; offset::Int=0)
 end
 
 function taketext!(buffer::Buffer, size::Int)
-    text = String(buffer.data[buffer.p:buffer.p+size-1])
+    @assert buffer.p + size - 1 ≤ buffer.p_end
+    # This allocates less than `String(buffer.data[buffer.p:buffer.p+size-1])`.
+    text = unsafe_string(pointer(buffer.data, buffer.p), size)
     buffer.p += size
     return text
 end
