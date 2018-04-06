@@ -388,6 +388,7 @@ const Table = Dict{String,Any}
 
 function parse(input::IO)
     reader = StreamReader(input)
+    dupdef() = parse_error("found a duplicated definition", reader.linenum)
     root = Table()
     tablekeys = Set{Vector{String}}()
     key = nothing
@@ -405,7 +406,7 @@ function parse(input::IO)
                 end
                 push!(node, x)
             else
-                @assert !haskey(node, key)  # TODO: must be checked by the stream reader
+                haskey(node, key) && dupdef()
                 node[key] = value(token)
             end
         elseif token.kind == :inline_array_begin
@@ -414,7 +415,7 @@ function parse(input::IO)
                 push!(node, arraytype(reader)[])
                 node = node[end]
             else
-                @assert !haskey(node, key)
+                haskey(node, key) && dupdef()
                 node[key] = arraytype(reader)[]
                 node = node[key]
             end
@@ -426,9 +427,8 @@ function parse(input::IO)
                 push!(node, Table())
                 node = node[end]
             else
-                @assert !haskey(node, key)
-                node[key] = Table()
-                node = node[key]
+                haskey(node, key) && dupdef()
+                node = get!(node, key, Table())
             end
         elseif token.kind == :inline_table_end
             node = pop!(stack)
@@ -445,12 +445,10 @@ function parse(input::IO)
                 elseif node isa Array
                     node = node[end]
                 else
-                    parse_error("found a duplicated definition", reader.linenum)
+                    dupdef()
                 end
             end
-            if keys ∈ tablekeys
-                parse_error("found a duplicated definition", reader.linenum)
-            end
+            keys ∈ tablekeys && dupdef()
             push!(tablekeys, keys)
             key = nothing
         elseif token.kind == :array_begin  # [[foo.bar]]
@@ -466,7 +464,7 @@ function parse(input::IO)
                 elseif node isa Array
                     node = node[end]
                 else
-                    parse_error("found a duplicated definition", reader.linenum)
+                    dupdef()
                 end
             end
             node = push!(get!(node, keys[end], Table[]), Table())[end]
