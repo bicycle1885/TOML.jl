@@ -93,9 +93,9 @@ function ensurebytes!(input::IO, buffer::Buffer, n::Int)
     return buffer.p_end - buffer.p + 1 ≥ n
 end
 
-function peekchar(input::IO, buffer::Buffer; offset::Int=0)
+@inline function peekchar(input::IO, buffer::Buffer; offset::Int=0)
     ensurebytes!(input, buffer, offset+4)
-    if buffer.p + offset ≤ buffer.p_end
+    @inbounds if buffer.p + offset ≤ buffer.p_end
         # NOTE: UTF-8 encoding is validated in fillbuffer!
         b = buffer.data[buffer.p+offset]
         u = UInt32(b) << 24
