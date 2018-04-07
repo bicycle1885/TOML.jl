@@ -128,6 +128,14 @@ function taketext!(buffer::Buffer, size::Int)
     return text
 end
 
+function takeback!(buffer::Buffer, text::String)
+    size = sizeof(text)
+    @assert size ≤ buffer.p
+    copyto!(buffer.data, buffer.p - size, text, 1, size)
+    buffer.p -= size
+    return buffer
+end
+
 function consume!(buffer::Buffer, size::Int)
     buffer.p += size
     return

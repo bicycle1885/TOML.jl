@@ -5,6 +5,7 @@ using Dates
 include("buffer.jl")
 include("value.jl")
 include("token.jl")
+include("tokenizer.jl")
 include("parser.jl")
 
 function debug(str::AbstractString)

@@ -6,6 +6,55 @@ using Dates
 # Use a small buffer size to detect buffering bugs.
 TOML.INIT_BUFFER_SIZE[] = 4
 
+@testset "Tokenizer" begin
+    for (text, expectvalue, token) in
+        [
+            # simple tokens
+            ("",        false, TOML.TOKEN_EOF),
+            (" ",       false, TOML.TOKEN_WHITESPACE_SPACE),
+            ("\t",      false, TOML.TOKEN_WHITESPACE_TAB),
+            ("\n",      false, TOML.TOKEN_NEWLINE_LF),
+            ("\r\n",    false, TOML.TOKEN_NEWLINE_CRLF),
+            ("# a b",   false, TOML.Token(:comment, "# a b")),
+            ("=",       false, TOML.TOKEN_EQUAL),
+            (".",       false, TOML.TOKEN_DOT),
+            (",",       false, TOML.TOKEN_COMMA),
+            ("{",       false, TOML.TOKEN_CURLY_BRACE_LEFT),
+            ("}",       false, TOML.TOKEN_CURLY_BRACE_RIGHT),
+            # tokens depending on the `expectvalue` parameter
+            ("100",     false, TOML.Token(:bare_key, "100")),
+            ("100",     true,  TOML.Token(:decimal, "100")),
+            ("true",    false, TOML.Token(:bare_key, "true")),
+            ("true",    true,  TOML.Token(:boolean, "true")),
+            ("false",   false, TOML.Token(:bare_key, "false")),
+            ("false",   true,  TOML.Token(:boolean, "false")),
+            ("\"key\"", false, TOML.Token(:quoted_key, "\"key\"")),
+            ("\"key\"", true,  TOML.Token(:basic_string, "\"key\"")),
+            ("'key'",   false, TOML.Token(:quoted_key, "'key'")),
+            ("'key'",   true,  TOML.Token(:literal_string, "'key'")),
+            ("[[",      false, TOML.TOKEN_DOUBLE_BRACKETS_LEFT),
+            ("[[",      true,  TOML.TOKEN_SINGLE_BRACKET_LEFT),
+            ("]]",      false, TOML.TOKEN_DOUBLE_BRACKETS_RIGHT),
+            ("]]",      true,  TOML.TOKEN_SINGLE_BRACKET_RIGHT),
+            # unknown tokens (will result in parse error)
+            ("!",       false, TOML.Token(:unknown, "!")),
+            ("\rX",     false, TOML.Token(:unknown, "\r")),
+            ("\"X",     false, TOML.Token(:unknown, "\"")),
+            ("'X",      false, TOML.Token(:unknown, "'")),
+        ]
+        tokenizer = TOML.Tokenizer(IOBuffer(text))
+        @test TOML.readtoken(tokenizer, expectvalue=expectvalue) == token
+    end
+
+    tokenizer = TOML.Tokenizer(IOBuffer("100"))
+    @test TOML.peektoken(tokenizer, expectvalue=false) == TOML.Token(:bare_key, "100")
+    @test TOML.peektoken(tokenizer, expectvalue=true)  == TOML.Token(:decimal, "100")
+    @test TOML.peektoken(tokenizer, expectvalue=false) == TOML.Token(:bare_key, "100")
+    @test TOML.peektoken(tokenizer, expectvalue=true)  == TOML.Token(:decimal, "100")
+    @test TOML.readtoken(tokenizer, expectvalue=false) == TOML.Token(:bare_key, "100")
+    @test TOML.readtoken(tokenizer, expectvalue=false) == TOML.TOKEN_EOF
+end
+
 # bare key
 @test TOML.keyname(Token(:bare_key, "foo")) === "foo"
 @test TOML.keyname(Token(:bare_key, "foo-bar")) === "foo-bar"
