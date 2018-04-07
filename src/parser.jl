@@ -26,6 +26,7 @@ end
 parse_error(msg, linenum) = throw(ParseError("$(msg) at line $(linenum)"))
 unexpectedtoken(token, linenum) = parse_error("unexpected $(tokendesc(token))", token.kind == :newline ? linenum - 1 : linenum)
 
+isnoneol(char::Char) = ' ' ≤ char ≤ '\U10FFFF' || char == '\t'
 iswhitespace(char::Char) = char == ' ' || char == '\t'
 isbarekeychar(char::Char) = 'A' ≤ char ≤ 'Z' || 'a' ≤ char ≤ 'z' || '0' ≤ char ≤ '9' || char == '-' || char == '_'
 
@@ -66,7 +67,7 @@ function readtoken(reader::StreamReader)
                 return TOKEN_NEWLINE_LF
             end
         elseif char == '#'  # comment
-            n = scanwhile(c -> c != '\r' && c != '\n', input, buffer)
+            n = scanwhile(isnoneol, input, buffer)
             return Token(:comment, taketext!(buffer, n))
         elseif reader.expectvalue
             if char == '['

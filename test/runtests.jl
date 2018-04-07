@@ -637,6 +637,7 @@ tokens = alltokens("""
 
 @test_throws TOML.ParseError("unexpected '!' at line 1") alltokens("!")
 @test_throws TOML.ParseError("unexpected '!' at line 3") alltokens("\n\n!")
+@test_throws TOML.ParseError("unexpected '\0' at line 1") alltokens("# \0")
 @test_throws TOML.ParseError("unexpected end of file at line 1") alltokens("x")
 @test_throws TOML.ParseError("unexpected end of file at line 1") alltokens("x=")
 @test_throws TOML.ParseError("unexpected ',' at line 1") alltokens("x,")
