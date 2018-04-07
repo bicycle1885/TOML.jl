@@ -183,12 +183,12 @@ foo=0o1234567
 ]
 
 tokens = alltokens("""
-foo=0x0123456789abcdef
+foo=0x0123456789ABCDEF
 """)
 @test tokens == [
     Token(:bare_key, "foo"),
     Token(:equal, "="),
-    Token(:hexadecimal, "0x0123456789abcdef"),
+    Token(:hexadecimal, "0x0123456789ABCDEF"),
     Token(:newline, "\n"),
 ]
 

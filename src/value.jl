@@ -16,7 +16,7 @@ const RE_BASIC_STRING = Regex(raw"""
     # escaped backslash
     \\ \\ |
     # escaped Unicode
-    \\u[0-9A-Fa-f]{4} | \\U[0-9A-Fa-f]{8}
+    \\u[0-9A-F]{4} | \\U[0-9A-F]{8}
 )*?
 "
 """, COMPILE_OPTIONS, MATCH_OPTIONS)
@@ -38,7 +38,7 @@ const RE_MULTILINE_BASIC_STRING = Regex(raw"""
     # escaped whitespace or newline character
     \\ (?: [ \t]+ | \r?\n) |
     # escaped Unicode codepoint
-    \\u[0-9A-Fa-f]{4} | \\U[0-9A-Fa-f]{8}
+    \\u[0-9A-F]{4} | \\U[0-9A-F]{8}
 )*?
 \"\"\"
 """, COMPILE_OPTIONS, MATCH_OPTIONS)
@@ -76,7 +76,7 @@ const RE_DECIMAL = Regex(raw"""
 """, COMPILE_OPTIONS, MATCH_OPTIONS)
 
 const RE_HEXADECIMAL = Regex(raw"""
-\A0x[0-9A-Fa-f](?:_?[0-9A-Fa-f]+)*
+\A0x[0-9A-F](?:_?[0-9A-F]+)*
 """, COMPILE_OPTIONS, MATCH_OPTIONS)
 
 const RE_FLOAT = Regex(raw"""

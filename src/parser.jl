@@ -19,15 +19,15 @@ function StreamReader(input::IO)
     return StreamReader(input, Buffer(), 1, false, Symbol[], Token[], Token[])
 end
 
-iswhitespace(char::Char) = char == ' ' || char == '\t'
-iskeychar(char::Char) = 'A' ≤ char ≤ 'Z' || 'a' ≤ char ≤ 'z' || '0' ≤ char ≤ '9' || char == '-' || char == '_'
-
 struct ParseError <: Exception
     msg::String
 end
 
 parse_error(msg, linenum) = throw(ParseError("$(msg) at line $(linenum)"))
 unexpectedtoken(token, linenum) = parse_error("unexpected $(tokendesc(token))", token.kind == :newline ? linenum - 1 : linenum)
+
+iswhitespace(char::Char) = char == ' ' || char == '\t'
+isbarekeychar(char::Char) = 'A' ≤ char ≤ 'Z' || 'a' ≤ char ≤ 'z' || '0' ≤ char ≤ '9' || char == '-' || char == '_'
 
 function readtoken(reader::StreamReader)
     if !isempty(reader.queue)
@@ -97,7 +97,7 @@ function readtoken(reader::StreamReader)
             consume!(buffer, 1)
             reader.expectvalue = true
             return TOKEN_EQUAL
-        elseif iskeychar(char)  # bare key
+        elseif isbarekeychar(char)  # bare key
             n = scanbarekey(input, buffer)
             return Token(:bare_key, taketext!(buffer, n))
         elseif char == '"' || char == '\''  # quoted key
