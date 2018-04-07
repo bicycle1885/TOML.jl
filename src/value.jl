@@ -72,24 +72,26 @@ const RE_OCTAL = Regex(raw"""
 """, COMPILE_OPTIONS, MATCH_OPTIONS)
 
 const RE_DECIMAL = Regex(raw"""
-\A[-+]?(?:0|[1-9](?:_?[0-9]+)*)
+\A[-+]?(?:0|[1-9](?:_?[0-9])*)
 """, COMPILE_OPTIONS, MATCH_OPTIONS)
 
 const RE_HEXADECIMAL = Regex(raw"""
-\A0x[0-9A-F](?:_?[0-9A-F]+)*
+\A0x[0-9A-F](?:_?[0-9A-F])*
 """, COMPILE_OPTIONS, MATCH_OPTIONS)
 
 const RE_FLOAT = Regex(raw"""
 \A
+# minus / plus
+[-+]?
 (?:
     # exponent
-    [-+]? (?:0|[1-9](?:_?[0-9]+)*) (?:\.[0-9](?:_?[0-9]+)*)? [eE] [-+]? (?:0|[1-9](?:_?[0-9]+)*) |
+    (?:0|[1-9](?:_?[0-9])*) (?:\.[0-9](?:_?[0-9])*)? [eE] [-+]? (?:0|[1-9](?:_?[0-9])*) |
     # fractional
-    [-+]? (?:0|[1-9](?:_?[0-9]+)*)    \.[0-9](?:_?[0-9]+)* |
+    (?:0|[1-9](?:_?[0-9])*)    \.[0-9](?:_?[0-9])* |
     # infinity
-    [-+]? inf |
+    inf |
     # not a number
-    [-+]? nan
+    nan
 )
 """, COMPILE_OPTIONS, MATCH_OPTIONS)
 
@@ -102,7 +104,7 @@ const RE_DATETIME = Regex(raw"""
 # the 'T' or a space (RFC 3339 section 5.6)
 [T ]
 # partial time
-[0-9]{2}:[0-9]{2}:[0-9]{2} (?:\.[0-9]+)?
+[0-9]{2}:[0-9]{2}:[0-9]{2} (?:\.[0-9])?
 # time offset
 (?:Z|[+-][0-9]{2}:[0-9]{2})
 """, COMPILE_OPTIONS, MATCH_OPTIONS)
@@ -114,7 +116,7 @@ const RE_LOCAL_DATETIME = Regex(raw"""
 # the 'T' or a space (RFC 3339 section 5.6)
 [T ]
 # partial time
-[0-9]{2}:[0-9]{2}:[0-9]{2} (?:\.[0-9]+)?
+[0-9]{2}:[0-9]{2}:[0-9]{2} (?:\.[0-9])?
 """, COMPILE_OPTIONS, MATCH_OPTIONS)
 
 const RE_LOCAL_DATE = Regex(raw"""
@@ -126,7 +128,7 @@ const RE_LOCAL_DATE = Regex(raw"""
 const RE_LOCAL_TIME = Regex(raw"""
 \A
 # partial time
-[0-9]{2}:[0-9]{2}:[0-9]{2} (?:\.[0-9]+)?
+[0-9]{2}:[0-9]{2}:[0-9]{2} (?:\.[0-9])?
 """, COMPILE_OPTIONS, MATCH_OPTIONS)
 
 function scanvalue(input::IO, buffer::Buffer)
