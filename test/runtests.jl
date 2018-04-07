@@ -153,6 +153,60 @@ tokens = alltokens("""# comment\n""")
 ]
 
 tokens = alltokens("""
+foo = "text"
+""")
+@test tokens == [
+ TOML.Token(:bare_key, "foo"),
+ TOML.Token(:whitespace, " "),
+ TOML.Token(:equal, "="),
+ TOML.Token(:whitespace, " "),
+ TOML.Token(:basic_string, "\"text\""),
+ TOML.Token(:newline, "\n"),
+]
+
+tokens = alltokens("""
+foo = \"\"\"
+"text1"
+""text2""
+\"\"\"
+""")
+@test tokens == [
+ TOML.Token(:bare_key, "foo"),
+ TOML.Token(:whitespace, " "),
+ TOML.Token(:equal, "="),
+ TOML.Token(:whitespace, " "),
+ TOML.Token(:multiline_basic_string, "\"\"\"\n\"text1\"\n\"\"text2\"\"\n\"\"\""),
+ TOML.Token(:newline, "\n"),
+]
+
+tokens = alltokens("""
+foo = 'text'
+""")
+@test tokens == [
+ TOML.Token(:bare_key, "foo"),
+ TOML.Token(:whitespace, " "),
+ TOML.Token(:equal, "="),
+ TOML.Token(:whitespace, " "),
+ TOML.Token(:literal_string, "'text'"),
+ TOML.Token(:newline, "\n"),
+]
+
+tokens = TOML.debug("""
+foo = '''
+'text'
+''text2''
+'''
+""")
+@test tokens == [
+ TOML.Token(:bare_key, "foo"),
+ TOML.Token(:whitespace, " "),
+ TOML.Token(:equal, "="),
+ TOML.Token(:whitespace, " "),
+ TOML.Token(:multiline_literal_string, "'''\n'text'\n''text2''\n'''"),
+ TOML.Token(:newline, "\n"),
+]
+
+tokens = alltokens("""
 foo=100
 """)
 @test tokens == [
