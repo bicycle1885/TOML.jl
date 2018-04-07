@@ -1,8 +1,10 @@
 # Parser
 # ======
 
-mutable struct StreamReader
-    input::IO
+mutable struct StreamReader{S<:IO}
+    # input stream
+    input::S
+    # data buffer
     buffer::Buffer
 
     # mutable state
