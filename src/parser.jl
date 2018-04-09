@@ -1,22 +1,25 @@
 # Parser
 # ======
 
-mutable struct StreamReader{S<:IO}
-    # input stream
-    input::S
-    # data buffer
-    buffer::Buffer
-
+mutable struct StreamReader
+    tokenizer::Tokenizer
     # mutable state
-    linenum::Int
-    expectvalue::Bool
     stack::Vector{Symbol}
     queue::Vector{Token}
-    parsequeue::Vector{Token}
 end
 
 function StreamReader(input::IO)
-    return StreamReader(input, Buffer(), 1, false, Symbol[], Token[], Token[])
+    return StreamReader(Tokenizer(input), Symbol[], Token[])
+end
+
+function linenumber(reader::StreamReader)
+    linenum = reader.tokenizer.linenum
+    for token in reader.queue
+        if token.kind == :newline
+            linenum -= 1
+        end
+    end
+    return linenum
 end
 
 struct ParseError <: Exception
@@ -26,328 +29,277 @@ end
 parse_error(msg, linenum) = throw(ParseError("$(msg) at line $(linenum)"))
 unexpectedtoken(token, linenum) = parse_error("unexpected $(tokendesc(token))", token.kind == :newline ? linenum - 1 : linenum)
 
-isnoneol(char::Char) = ' ' ≤ char ≤ '\U10FFFF' || char == '\t'
-iswhitespace(char::Char) = char == ' ' || char == '\t'
-isbarekeychar(char::Char) = 'A' ≤ char ≤ 'Z' || 'a' ≤ char ≤ 'z' || '0' ≤ char ≤ '9' || char == '-' || char == '_'
-
-function readtoken(reader::StreamReader)
+# Basically, this function parses line by line.
+function parsetoken(reader::StreamReader)
     if !isempty(reader.queue)
         return popfirst!(reader.queue)
     end
-    input = reader.input
-    buffer = reader.buffer
+    top() = isempty(reader.stack) ? :__empty__ : stack[end]
+    emit(token) = push!(reader.queue, token)
+    tokenizer = reader.tokenizer
     stack = reader.stack
-    queue = reader.queue
-    while (char_n = peekchar(input, buffer))[2] > 0
-        char, n = char_n
-        if iswhitespace(char)  # space or tab
-            n = scanwhitespace(input, buffer)
-            if n == 1
-                consume!(buffer, 1)
-                if char == ' '
-                    return TOKEN_WHITESPACE_SPACE
-                else
-                    return TOKEN_WHITESPACE_TAB
-                end
-            else
-                return Token(:whitespace, taketext!(buffer, n))
-            end
-        elseif char ∈ ('\r', '\n')  # newline
-            consume!(buffer, 1)
-            if char == '\r'
-                if peekchar(input, buffer) == ('\n', 1)
-                    consume!(buffer, 1)
-                    reader.linenum += 1
-                    return TOKEN_NEWLINE_CRLF
-                else
-                    parse_error("line feed (LF) is expected after carriage return (CR)", reader.linenum)
-                end
-            else
-                reader.linenum += 1
-                return TOKEN_NEWLINE_LF
-            end
-        elseif char == '#'  # comment
-            n = scanwhile(isnoneol, input, buffer)
-            return Token(:comment, taketext!(buffer, n))
-        elseif reader.expectvalue
-            if char == '['
-                consume!(buffer, 1)
-                return TOKEN_SINGLE_BRACKET_LEFT
-            elseif char == ']'
-                consume!(buffer, 1)
-                return TOKEN_SINGLE_BRACKET_RIGHT
-            elseif char == '{'
-                consume!(buffer, 1)
-                reader.expectvalue = false
-                return TOKEN_CURLY_BRACE_LEFT
-            end
-            kind, n = scanvalue(input, buffer)
-            if kind == :novalue
-                parse_error("invalid value format", reader.linenum)
-            elseif kind == :eof
-                parse_error("unexpected end of file", reader.linenum)
-            end
-            reader.expectvalue = false
-            token = Token(kind, taketext!(buffer, n))
-            if token.kind ∈ (:multiline_basic_string, :multiline_literal_string)
-                # multiline strings may contain newlines
-                reader.linenum += countlines(token)
-            end
+    token = readtoken(tokenizer, rhs=top() == :array)
+    if top() == :array
+        if token.kind ∈ (:whitespace, :newline, :comment)
             return token
-        elseif char == '='
-            consume!(buffer, 1)
-            reader.expectvalue = true
-            return TOKEN_EQUAL
-        elseif isbarekeychar(char)  # bare key
-            n = scanbarekey(input, buffer)
-            return Token(:bare_key, taketext!(buffer, n))
-        elseif char == '"' || char == '\''  # quoted key
-            n = scanpattern(char == '"' ? RE_BASIC_STRING : RE_LITERAL_STRING, input, buffer)
-            if n < 2  # the minimum quoted key is "" or ''
-                parse_error("invalid quoted key", reader.linenum)
+        elseif isatomicvalue(token)
+            let token = peektoken(tokenizer, rhs=true)
+                if token.kind == :whitespace
+                    emit(readtoken(tokenizer, rhs=true))
+                    token = peektoken(tokenizer, rhs=true)
+                end
+                if token.kind == :comma
+                    emit(readtoken(tokenizer, rhs=true))
+                elseif token.kind ∈ (:single_bracket_right, :newline, :comment)
+                    # ok
+                else
+                    unexpectedtoken(token, tokenizer.linenum)
+                end
             end
-            return Token(:quoted_key, taketext!(buffer, n))
-        elseif char == '['  # table or array of tables
-            consume!(buffer, 1)
-            if peekchar(input, buffer) == ('[', 1)
-                consume!(buffer, 1)
-                return TOKEN_DOUBLE_BRACKETS_LEFT
-            else
-                return TOKEN_SINGLE_BRACKET_LEFT
-            end
-        elseif char == ']'  # table, array of tables, or inline table
-            consume!(buffer, 1)
-            if !isempty(reader.stack) && reader.stack[end] == :inline_array
-                return TOKEN_SINGLE_BRACKET_RIGHT
-            elseif peekchar(input, buffer) == (']', 1)
-                consume!(buffer, 1)
-                return TOKEN_DOUBLE_BRACKETS_RIGHT
-            else
-                return TOKEN_SINGLE_BRACKET_RIGHT
-            end
-        elseif char == '.'  # dot
-            consume!(buffer, 1)
-            return TOKEN_DOT
-        elseif char == ','  # comma
-            consume!(buffer, 1)
-            if !isempty(reader.stack) && reader.stack[end] == :inline_array
-                reader.expectvalue = true
-                return TOKEN_COMMA
-            elseif !isempty(reader.stack) && reader.stack[end] == :inline_table
-                reader.expectvalue = false
-                return TOKEN_COMMA
-            else
-                parse_error("unexpected ','", reader.linenum)
-            end
-        elseif char == '}'  # inline table
-            consume!(buffer, 1)
-            return TOKEN_CURLY_BRACE_RIGHT
-        else
-            parse_error("unexpected '$(char)'", reader.linenum)
-        end
-    end
-    return TOKEN_EOF
-end
-
-function peektoken(reader::StreamReader)
-    if !isempty(reader.queue)
-        return reader.queue[1]
-    end
-    token = readtoken(reader)
-    push!(reader.queue, token)
-    return token
-end
-
-function parsetoken(reader::StreamReader)
-    #@show reader.stack peektoken(reader)
-    if !isempty(reader.parsequeue)
-        return popfirst!(reader.parsequeue)
-    end
-    emit(token) = push!(reader.parsequeue, token)
-    stack = reader.stack
-    top = isempty(stack) ? :none : stack[end]
-    token = peektoken(reader)
-    if top == :inline_array
-        if token.kind ∈ (:comment, :whitespace, :newline)
-            readtoken(reader)
             return token
         elseif token.kind == :single_bracket_left
-            readtoken(reader)
+            # found a new array inside the current array (nested arrays)
+            push!(stack, :array)
             emit(token)
-            push!(stack, :inline_array)
             return TOKEN_INLINE_ARRAY_BEGIN
-        elseif token.kind == :single_bracket_right
-            readtoken(reader)
-            pop!(stack)
-            if isempty(stack) || stack[end] != :inline_array
-                reader.expectvalue = false
-            end
-            emit(TOKEN_INLINE_ARRAY_END)
-            while peektoken(reader).kind ∈ (:comment, :whitespace, :newline)
-                emit(readtoken(reader))
-            end
-            if peektoken(reader).kind == :comma
-                emit(readtoken(reader))
-            end
-            return token
         elseif token.kind == :curly_brace_left
-            readtoken(reader)
+            # found an inline table inside the current array
+            push!(stack, :table)
             emit(token)
-            push!(stack, :inline_table)
             return TOKEN_INLINE_TABLE_BEGIN
-        elseif isatomicvalue(token)
-            readtoken(reader)
-            while peektoken(reader).kind ∈ (:comment, :whitespace, :newline)
-                emit(readtoken(reader))
-            end
-            if peektoken(reader).kind == :comma
-                emit(readtoken(reader))
+        elseif token.kind == :single_bracket_right
+            pop!(stack)
+            emit(TOKEN_INLINE_ARRAY_END)
+            if top() == :array
+                let token = peektoken(tokenizer, rhs=true)
+                    if token.kind == :whitespace
+                        emit(readtoken(tokenizer, rhs=true))
+                        token = peektoken(tokenizer, rhs=true)
+                    end
+                    if token.kind == :comma
+                        emit(readtoken(tokenizer, rhs=true))
+                    elseif token.kind ∈ (:single_bracket_right, :newline, :comment)
+                        # ok
+                    else
+                        unexpectedtoken(token, tokenizer.linenum)
+                    end
+                end
+            elseif top() == :table
+                let token = peektoken(tokenizer, rhs=true)
+                    if token.kind == :whitespace
+                        emit(readtoken(tokenizer, rhs=true))
+                        token = peektoken(tokenizer, rhs=true)
+                    end
+                    if token.kind == :comma
+                        emit(readtoken(tokenizer, rhs=true))
+                    elseif token.kind == :curly_brace_right
+                        # ok
+                    else
+                        unexpectedtoken(token, tokenizer.linenum)
+                    end
+                end
+            else @assert isempty(stack)
+                let token = parselineend(reader)
+                    if !iseol(token)
+                        unexpectedtoken(token, tokenizer.linenum)
+                    end
+                    emit(token)
+                end
             end
             return token
         else
-            unexpectedtoken(token, reader.linenum)
+            unexpectedtoken(token, tokenizer.linenum)
         end
-    elseif top == :inline_table
+    elseif top() == :table
         if token.kind == :whitespace
-            readtoken(reader)
+            return token
+        elseif iskey(token)
+            let token = readtoken(tokenizer)
+                # read equal sign
+                if token.kind == :whitespace
+                    emit(token)
+                    token = readtoken(tokenizer)
+                end
+                if token.kind != :equal
+                    unexpectedtoken(token, tokenizer.linenum)
+                end
+                emit(token)
+                # read value
+                token = readtoken(tokenizer, rhs=true)
+                if token.kind == :whitespace
+                    emit(token)
+                    token = readtoken(tokenizer, rhs=true)
+                end
+                if isatomicvalue(token)
+                    emit(token)
+                    # read comma or right curly brace
+                    token = peektoken(tokenizer)
+                    if token.kind == :whitespace
+                        emit(readtoken(tokenizer))
+                        token = peektoken(tokenizer)
+                    end
+                    if token.kind == :comma
+                        emit(readtoken(tokenizer))
+                    elseif token.kind == :curly_brace_right
+                        # ok
+                    else
+                        unexpectedtoken(token, tokenizer.linenum)
+                    end
+                elseif token.kind == :single_bracket_left
+                    emit(TOKEN_INLINE_ARRAY_BEGIN)
+                    emit(token)
+                    push!(stack, :array)
+                elseif token.kind == :curly_brace_left
+                    emit(TOKEN_INLINE_TABLE_BEGIN)
+                    emit(token)
+                    push!(stack, :table)
+                else
+                    unexpectedtoken(token, tokenizer.linenum)
+                end
+            end
             return token
         elseif token.kind == :curly_brace_right
-            readtoken(reader)
             pop!(stack)
             emit(TOKEN_INLINE_TABLE_END)
-            while peektoken(reader).kind == :whitespace
-                emit(readtoken(reader))
-            end
-            if peektoken(reader).kind == :comma
-                emit(readtoken(reader))
-            end
-            return token
-        elseif token.kind ∈ (:bare_key, :quoted_key)
-            parsekeyvalue(reader)
-            if peektoken(reader).kind == :whitespace
-                emit(readtoken(reader))
-            end
-            if peektoken(reader).kind == :comma
-                emit(readtoken(reader))
-            elseif isatomicvalue(peektoken(reader)) || iscontainer(peektoken(reader))
-                # ok
-            elseif peektoken(reader).kind ∈ (:curly_brace_right, :bare_key, :quoted_key, :whitespace)
-                # ok
-            else
-                unexpectedtoken(peektoken(reader), reader.linenum)
+            if top() == :array
+                let token = peektoken(tokenizer, rhs=true)
+                    if token.kind == :whitespace
+                        emit(readtoken(tokenizer, rhs=true))
+                        token = peektoken(tokenizer, rhs=true)
+                    end
+                    if token.kind == :comma
+                        emit(readtoken(tokenizer, rhs=true))
+                    elseif token.kind ∈ (:single_bracket_right, :newline, :comment)
+                        # ok
+                    else
+                        unexpectedtoken(token, tokenizer.linenum)
+                    end
+                end
+            elseif top() == :table
+                let token = peektoken(tokenizer, rhs=true)
+                    if token.kind == :whitespace
+                        emit(readtoken(tokenizer, rhs=true))
+                        token = peektoken(tokenizer, rhs=true)
+                    end
+                    if token.kind == :comma
+                        emit(readtoken(tokenizer, rhs=true))
+                    elseif token.kind == :curly_brace_right
+                        # ok
+                    else
+                        unexpectedtoken(token, tokenizer.linenum)
+                    end
+                end
+            else @assert isempty(stack)
+                let token = parselineend(reader)
+                    if !iseol(token)
+                        unexpectedtoken(token, tokenizer.linenum)
+                    end
+                    emit(token)
+                end
             end
             return token
         else
-            unexpectedtoken(token, reader.linenum)
+            unexpectedtoken(token, tokenizer.linenum)
         end
-    elseif token.kind ∈ (:eof, :comment, :whitespace, :newline)
-        readtoken(reader)
+    elseif token.kind ∈ (:whitespace, :newline, :comment, :eof)
         return token
-    elseif token.kind ∈ (:bare_key, :quoted_key)
-        value = parsekeyvalue(reader)
-        if isatomicvalue(value) && peektoken(reader).kind == :whitespace
-            emit(readtoken(reader))
-            if peektoken(reader).kind ∉ (:newline, :comment)
-                unexpectedtoken(peektoken(reader), reader.linenum)
+    elseif iskey(token)
+        let token = readtoken(tokenizer)
+            if token.kind == :whitespace
+                emit(token)
+                token = readtoken(tokenizer)
+            end
+            if token.kind != :equal
+                unexpectedtoken(token, tokenizer.linenum)
+            end
+            emit(token)
+            token = readtoken(tokenizer, rhs=true)
+            if token.kind == :whitespace
+                emit(token)
+                token = readtoken(tokenizer, rhs=true)
+            end
+            if isatomicvalue(token)
+                emit(token)
+                token = parselineend(reader)
+                if !iseol(token)
+                    unexpectedtoken(token, tokenizer.linenum)
+                end
+                emit(token)
+            elseif token.kind == :single_bracket_left  # <key> = [
+                emit(TOKEN_INLINE_ARRAY_BEGIN)
+                emit(token)
+                push!(stack, :array)
+            elseif token.kind == :curly_brace_left  # <key> = {
+                emit(TOKEN_INLINE_TABLE_BEGIN)
+                emit(token)
+                push!(stack, :table)
+            else
+                unexpectedtoken(token, tokenizer.linenum)
             end
         end
         return token
     elseif token.kind ∈ (:single_bracket_left, :double_brackets_left)
-        # '['  whitespace? ((bare_key|quoted_key) whitespace?) ('.' whitespace? (bare_key|quoted_key) whitespace?)*  ']'
-        # '[[' whitespace? ((bare_key|quoted_key) whitespace?) ('.' whitespace? (bare_key|quoted_key) whitespace?)* ']]'
-        close = token.kind == :single_bracket_left ? :single_bracket_right : :double_brackets_right
-        readtoken(reader)
+        endkind = token.kind == :single_bracket_left ? :single_bracket_right : :double_brackets_right
         emit(token)
-        let token = readtoken(reader)
-            token.kind == :whitespace && (emit(token); token = readtoken(reader))
-            if token.kind ∈ (:bare_key, :quoted_key)
+        token = readtoken(tokenizer)
+        if token.kind == :whitespace
+            emit(token)
+            token = readtoken(tokenizer)
+        end
+        if !iskey(token)
+            unexpectedtoken(token, tokenizer.linenum)
+        end
+        emit(token)
+        while (token = readtoken(tokenizer)).kind != endkind
+            if token.kind == :whitespace
                 emit(token)
-                peektoken(reader).kind == :whitespace && emit(readtoken(reader))
-            else
-                unexpectedtoken(token, reader.linenum)
+                token = readtoken(tokenizer)
             end
-            while (token = readtoken(reader)).kind != close
-                if token.kind == :dot
-                    emit(token)
-                else
-                    unexpectedtoken(token, reader.linenum)
-                end
-                token = readtoken(reader)
-                token.kind == :whitespace && (emit(token); token = readtoken(reader))
-                if token.kind ∈ (:bare_key, :quoted_key)
-                    emit(token)
-                    peektoken(reader).kind == :whitespace && emit(readtoken(reader))
-                else
-                    unexpectedtoken(token, reader.linenum)
-                end
+            if token.kind == endkind
+                break
+            elseif token.kind != :dot
+                unexpectedtoken(token, tokenizer.linenum)
             end
-            if token.kind != close
-                unexpectedtoken(token, reader.linenum)
+            emit(token)
+            token = readtoken(tokenizer)
+            if token.kind == :whitespace
+                emit(token)
+                token = readtoken(tokenizer)
+            end
+            if !iskey(token)
+                unexpectedtoken(token, tokenizer.linenum)
             end
             emit(token)
         end
-        if token.kind == :single_bracket_left
-            emit(TOKEN_TABLE_END)
-            return TOKEN_TABLE_BEGIN
-        else
-            emit(TOKEN_ARRAY_END)
-            return TOKEN_ARRAY_BEGIN
+        emit(token)
+        emit(endkind == :single_bracket_right ? TOKEN_TABLE_END : TOKEN_ARRAY_END)
+        token = parselineend(reader)
+        if !iseol(token)
+            unexpectedtoken(token, tokenizer.linenum)
         end
+        emit(token)
+        return endkind == :single_bracket_right ? TOKEN_TABLE_BEGIN : TOKEN_ARRAY_BEGIN
     else
-        unexpectedtoken(token, reader.linenum)
+        unexpectedtoken(token, tokenizer.linenum)
     end
 end
 
-function parsekeyvalue(reader::StreamReader)
-    # (bare_key | quoted_key) whitespace? '=' whitespace? (atomic_value | '[' | '{')
-    emit(token) = push!(reader.parsequeue, token)
-    emitkey = false
-    @label readkey
-    token = readtoken(reader)
-    if !iskey(token)
-        unexpectedtoken(token, reader.linenum)
-    elseif emitkey
-        emit(token)
-    end
-    token = readtoken(reader)
+function parselineend(reader::StreamReader)
+    emit(token) = push!(reader.queue, token)
+    tokenizer = reader.tokenizer
+    token = readtoken(tokenizer)
     if token.kind == :whitespace
         emit(token)
-        token = readtoken(reader)
-    end
-    if token.kind == :equal
-        emit(token)
-    elseif token.kind == :dot
-        # dotted keys
-        emit(token)
-        if peektoken(reader).kind == :whitespace
-            emit(readtoken(reader))
+        token = readtoken(tokenizer)
+        if token.kind == :comment
+            emit(token)
+            token = readtoken(tokenizer)
         end
-        emitkey = true
-        @goto readkey
-    else
-        unexpectedtoken(token, reader.linenum)
+    elseif token.kind == :comment
+        emit(token)
+        token = readtoken(tokenizer)
     end
-    token = readtoken(reader)
-    if token.kind == :whitespace
-        emit(token)
-        token = readtoken(reader)
-    end
-    if isatomicvalue(token)
-        emit(token)
-        return token
-    elseif token.kind == :single_bracket_left  # inline array
-        emit(TOKEN_INLINE_ARRAY_BEGIN)
-        emit(token)
-        push!(reader.stack, :inline_array)
-        return token
-    elseif token.kind == :curly_brace_left  # inline table
-        emit(TOKEN_INLINE_TABLE_BEGIN)
-        emit(token)
-        push!(reader.stack, :inline_table)
-        return token
-    else
-        unexpectedtoken(token, reader.linenum)
-    end
+    return token
 end
 
 # Infer the type of elements in the current array.
@@ -380,7 +332,7 @@ function arraytype(reader::StreamReader)
         token = parsetoken(reader)
         push!(tokens, token)
     end
-    prepend!(reader.parsequeue, tokens)
+    prepend!(reader.queue, tokens)
     return t
 end
 
@@ -391,7 +343,7 @@ const Table = Dict{String,Any}
 
 function parse(input::IO)
     reader = StreamReader(input)
-    dupdef() = parse_error("found a duplicated definition", reader.linenum)
+    dupdef() = parse_error("found a duplicated definition", linenumber(reader))
     root = Table()
     tablekeys = Set{Vector{String}}()
     key = nothing
@@ -405,7 +357,7 @@ function parse(input::IO)
                 x = value(token)
                 if !isempty(node) && typeof(node[1]) != typeof(x)
                     # This line number may be wrong.
-                    parse_error("mixed array types", reader.linenum)
+                    parse_error("mixed array types", linenumber(reader))
                 end
                 push!(node, x)
             else

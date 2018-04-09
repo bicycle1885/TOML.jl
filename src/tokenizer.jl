@@ -20,9 +20,11 @@ isnoneol(char::Char) = ' ' ≤ char ≤ '\U10FFFF' || char == '\t'
 iswhitespace(char::Char) = char == ' ' || char == '\t'
 isbarekeychar(char::Char) = 'A' ≤ char ≤ 'Z' || 'a' ≤ char ≤ 'z' || '0' ≤ char ≤ '9' || char == '-' || char == '_'
 
-function readtoken(tokenizer::Tokenizer; expectvalue::Bool=false)::Token
+# When rhs=true, it prefers right-hand side tokens to other tokens
+# (e.g. "true" will be a boolean value rather than a bare key).
+function readtoken(tokenizer::Tokenizer; rhs::Bool=false)::Token
     if tokenizer.next != nothing
-        if tokenizer.next[2] == expectvalue
+        if tokenizer.next[2] == rhs
             token = tokenizer.next[1]
             tokenizer.next = nothing
             return token
@@ -68,10 +70,10 @@ function readtoken(tokenizer::Tokenizer; expectvalue::Bool=false)::Token
     elseif char == '='
         consume!(buffer, 1)
         return TOKEN_EQUAL
-    elseif !expectvalue && isbarekeychar(char)
+    elseif !rhs && isbarekeychar(char)
         n = scanbarekey(input, buffer)
         return Token(:bare_key, taketext!(buffer, n))
-    elseif !expectvalue && (char == '"' || char == '\'')  # quoted key
+    elseif !rhs && (char == '"' || char == '\'')  # quoted key
         n = scanpattern(char == '"' ? RE_BASIC_STRING : RE_LITERAL_STRING, input, buffer)
         if n < 2
             return Token(:unknown, char == '"' ? "\"" : "'")
@@ -84,7 +86,7 @@ function readtoken(tokenizer::Tokenizer; expectvalue::Bool=false)::Token
         consume!(buffer, 1)
         return TOKEN_COMMA
     elseif char == '['  # table or array of tables
-        if !expectvalue && peekchar(input, buffer, offset=1)[1] == '['
+        if !rhs && peekchar(input, buffer, offset=1)[1] == '['
             consume!(buffer, 2)
             return TOKEN_DOUBLE_BRACKETS_LEFT
         else
@@ -92,7 +94,7 @@ function readtoken(tokenizer::Tokenizer; expectvalue::Bool=false)::Token
             return TOKEN_SINGLE_BRACKET_LEFT
         end
     elseif char == ']'
-        if !expectvalue && peekchar(input, buffer, offset=1)[1] == ']'
+        if !rhs && peekchar(input, buffer, offset=1)[1] == ']'
             consume!(buffer, 2)
             return TOKEN_DOUBLE_BRACKETS_RIGHT
         else
@@ -112,21 +114,21 @@ function readtoken(tokenizer::Tokenizer; expectvalue::Bool=false)::Token
         else
             text = taketext!(buffer, n)
             if kind ∈ (:multiline_basic_string, :multiline_literal_string)
-                reader.linenum += count(isequal('\n'), text)
+                tokenizer.linenum += count(isequal('\n'), text)
             end
             return Token(kind, text)
         end
     end
 end
 
-function peektoken(tokenizer::Tokenizer; expectvalue::Bool=false)::Token
+function peektoken(tokenizer::Tokenizer; rhs::Bool=false)::Token
     if tokenizer.next == nothing
         linenum = tokenizer.linenum
-        tokenizer.next = (readtoken(tokenizer, expectvalue=expectvalue), expectvalue, linenum)
-    elseif tokenizer.next[2] != expectvalue && !isempty(tokenizer.next[1].text)
+        tokenizer.next = (readtoken(tokenizer, rhs=rhs), rhs, linenum)
+    elseif tokenizer.next[2] != rhs && !isempty(tokenizer.next[1].text)
         reset(tokenizer)
         linenum = tokenizer.linenum
-        tokenizer.next = (readtoken(tokenizer, expectvalue=expectvalue), expectvalue, linenum)
+        tokenizer.next = (readtoken(tokenizer, rhs=rhs), rhs, linenum)
     end
     return tokenizer.next[1]
 end

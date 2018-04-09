@@ -49,6 +49,7 @@ isatomicvalue(token::Token) = isstring(token) || isinteger(token) || isfloat(tok
 iscontainer(token::Token) = token.kind ∈ (:single_bracket_left, :curly_brace_left)
 #iscontainer(token::Token) = token.kind ∈ (:inline_table_begin , :inline_array_begin)
 iskey(token::Token) = token.kind == :bare_key || token.kind == :quoted_key
+iseol(token::Token) = token.kind == :newline || token.kind == :eof
 iseof(token::Token) = token.kind == :eof
 
 # Human-readable description of token.
@@ -93,6 +94,8 @@ function tokendesc(token::Token)
         return "'{'"
     elseif token.kind == :curly_brace_right
         return "'}'"
+    elseif token.kind == :unknown
+        return "'$(token.text)'"
     else
         return string(token.kind)
     end
