@@ -34,7 +34,7 @@ function parsetoken(reader::StreamReader)
     if !isempty(reader.queue)
         return popfirst!(reader.queue)
     end
-    top() = isempty(reader.stack) ? :__empty__ : stack[end]
+    top() = isempty(reader.stack) ? :__empty__ : reader.stack[end]
     emit(token) = push!(reader.queue, token)
     tokenizer = reader.tokenizer
     stack = reader.stack
