@@ -87,13 +87,13 @@ function parsetoken(reader::StreamReader)
                     end
                 end
             elseif top() == :table
-                let token = peektoken(tokenizer, rhs=true)
+                let token = peektoken(tokenizer)
                     if token.kind == :whitespace
-                        emit(readtoken(tokenizer, rhs=true))
-                        token = peektoken(tokenizer, rhs=true)
+                        emit(readtoken(tokenizer))
+                        token = peektoken(tokenizer)
                     end
                     if token.kind == :comma
-                        emit(readtoken(tokenizer, rhs=true))
+                        emit(readtoken(tokenizer))
                     elseif token.kind == :curly_brace_right
                         # ok
                     else
@@ -101,12 +101,7 @@ function parsetoken(reader::StreamReader)
                     end
                 end
             else @assert isempty(stack)
-                let token = parselineend(reader)
-                    if !iseol(token)
-                        unexpectedtoken(token, tokenizer.linenum)
-                    end
-                    emit(token)
-                end
+                parselineend(reader)
             end
             return token
         else
@@ -146,13 +141,13 @@ function parsetoken(reader::StreamReader)
                         unexpectedtoken(token, tokenizer.linenum)
                     end
                 elseif token.kind == :single_bracket_left
+                    push!(stack, :array)
                     emit(TOKEN_INLINE_ARRAY_BEGIN)
                     emit(token)
-                    push!(stack, :array)
                 elseif token.kind == :curly_brace_left
+                    push!(stack, :table)
                     emit(TOKEN_INLINE_TABLE_BEGIN)
                     emit(token)
-                    push!(stack, :table)
                 else
                     unexpectedtoken(token, tokenizer.linenum)
                 end
@@ -176,13 +171,13 @@ function parsetoken(reader::StreamReader)
                     end
                 end
             elseif top() == :table
-                let token = peektoken(tokenizer, rhs=true)
+                let token = peektoken(tokenizer)
                     if token.kind == :whitespace
-                        emit(readtoken(tokenizer, rhs=true))
-                        token = peektoken(tokenizer, rhs=true)
+                        emit(readtoken(tokenizer))
+                        token = peektoken(tokenizer)
                     end
                     if token.kind == :comma
-                        emit(readtoken(tokenizer, rhs=true))
+                        emit(readtoken(tokenizer))
                     elseif token.kind == :curly_brace_right
                         # ok
                     else
@@ -190,12 +185,7 @@ function parsetoken(reader::StreamReader)
                     end
                 end
             else @assert isempty(stack)
-                let token = parselineend(reader)
-                    if !iseol(token)
-                        unexpectedtoken(token, tokenizer.linenum)
-                    end
-                    emit(token)
-                end
+                parselineend(reader)
             end
             return token
         else
@@ -218,19 +208,15 @@ function parsetoken(reader::StreamReader)
             end
             if isatomicvalue(token)
                 emit(token)
-                token = parselineend(reader)
-                if !iseol(token)
-                    unexpectedtoken(token, tokenizer.linenum)
-                end
-                emit(token)
+                parselineend(reader)
             elseif token.kind == :single_bracket_left  # <key> = [
+                push!(stack, :array)
                 emit(TOKEN_INLINE_ARRAY_BEGIN)
                 emit(token)
-                push!(stack, :array)
             elseif token.kind == :curly_brace_left  # <key> = {
+                push!(stack, :table)
                 emit(TOKEN_INLINE_TABLE_BEGIN)
                 emit(token)
-                push!(stack, :table)
             else
                 unexpectedtoken(token, tokenizer.linenum)
             end
@@ -271,11 +257,7 @@ function parsetoken(reader::StreamReader)
         end
         emit(token)
         emit(endkind == :single_bracket_right ? TOKEN_TABLE_END : TOKEN_ARRAY_END)
-        token = parselineend(reader)
-        if !iseol(token)
-            unexpectedtoken(token, tokenizer.linenum)
-        end
-        emit(token)
+        parselineend(reader)
         return endkind == :single_bracket_right ? TOKEN_TABLE_BEGIN : TOKEN_ARRAY_BEGIN
     elseif token.kind ∈ (:newline, :comment, :eof)
         return token
@@ -299,6 +281,10 @@ function parselineend(reader::StreamReader)
         emit(token)
         token = readtoken(tokenizer)
     end
+    if !iseol(token)
+        unexpectedtoken(token, tokenizer.linenum)
+    end
+    emit(token)
     return token
 end
 
