@@ -306,7 +306,7 @@ function arraytype(reader::StreamReader)
             elseif isboolean(token)
                 t = Bool
             else
-                assert(false)
+                @assert(false)
             end
         elseif token.kind == :inline_array_begin
             t = Vector
