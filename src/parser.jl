@@ -39,8 +39,10 @@ function parsetoken(reader::StreamReader)
     tokenizer = reader.tokenizer
     stack = reader.stack
     token = readtoken(tokenizer, rhs=top() == :array)
-    if top() == :array
-        if token.kind ∈ (:whitespace, :newline, :comment)
+    if token.kind == :whitespace
+        return token
+    elseif top() == :array
+        if token.kind ∈ (:newline, :comment)
             return token
         elseif isatomicvalue(token)
             let token = peektoken(tokenizer, rhs=true)
@@ -111,9 +113,7 @@ function parsetoken(reader::StreamReader)
             unexpectedtoken(token, tokenizer.linenum)
         end
     elseif top() == :table
-        if token.kind == :whitespace
-            return token
-        elseif iskey(token)
+        if iskey(token)
             let token = readtoken(tokenizer)
                 # read equal sign
                 if token.kind == :whitespace
@@ -201,8 +201,6 @@ function parsetoken(reader::StreamReader)
         else
             unexpectedtoken(token, tokenizer.linenum)
         end
-    elseif token.kind ∈ (:whitespace, :newline, :comment, :eof)
-        return token
     elseif iskey(token)
         let token = readtoken(tokenizer)
             if token.kind == :whitespace
@@ -279,6 +277,8 @@ function parsetoken(reader::StreamReader)
         end
         emit(token)
         return endkind == :single_bracket_right ? TOKEN_TABLE_BEGIN : TOKEN_ARRAY_BEGIN
+    elseif token.kind ∈ (:newline, :comment, :eof)
+        return token
     else
         unexpectedtoken(token, tokenizer.linenum)
     end
